@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { projectInvestmentBreakdowns, projects, resourcePeople, supplierBudgets } from "../data";
+import { FilterPanel } from "../components/FilterPanel";
 import { MetricCard, MiniBarChart, ProgressBar, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
 import type { Demand, DemandProjectFlow, Project, RoleId, RoleOption, Task, Tone } from "../types";
 
@@ -160,6 +161,18 @@ export function Reports({
   const detailRows = buildDetailRows(activeRole, effectiveDomain, filteredProjects, filteredDemands, filteredTasks, filteredSuppliers, filteredInvestments, visibleFlows);
   const insights = buildInsights(activeRole, effectiveDomain, filteredProjects, filteredDemands, filteredTasks, filteredSuppliers, filteredInvestments);
   const resultCount = countDomainObjects(effectiveDomain, filteredProjects, filteredDemands, filteredTasks, filteredSuppliers);
+  const activeFilterCount = countActiveFilters(filters, {
+    timeRange: "6m",
+    domain: defaultDomain,
+    department: allOption,
+    projectType: allOption,
+    implementation: allOption,
+    stage: allOption,
+    risk: allOption,
+    projectOwner: allOption,
+    productOwner: allOption,
+    supplierManager: allOption
+  });
 
   function resetFilters() {
     setFilters({
@@ -186,63 +199,63 @@ export function Reports({
       </div>
 
       <div className="panel">
-        <SectionHeader eyebrow="FILTERS" title="报表筛选" />
-        <div className="filter-bar">
-          <select value={filters.timeRange} onChange={(event) => setFilters((current) => ({ ...current, timeRange: event.target.value as TimeRange }))}>
-            {timeRanges.map((range) => <option key={range.value} value={range.value}>{range.label}</option>)}
-          </select>
-          {canSwitchDomain ? (
-            <select value={effectiveDomain} onChange={(event) => setFilters((current) => ({ ...current, domain: event.target.value as ReportDomain }))}>
-              {allowedDomains.map((domain) => <option key={domain} value={domain}>{domainLabels[domain]}</option>)}
+        <FilterPanel eyebrow="FILTERS" title="报表筛选" summary={`当前 ${resultCount} 条对象 · ${timeRanges.find((item) => item.value === filters.timeRange)?.label}`} activeCount={activeFilterCount}>
+          <div className="filter-bar">
+            <select value={filters.timeRange} onChange={(event) => setFilters((current) => ({ ...current, timeRange: event.target.value as TimeRange }))}>
+              {timeRanges.map((range) => <option key={range.value} value={range.value}>{range.label}</option>)}
             </select>
-          ) : (
-            <span className="filter-chip">{domainLabels[effectiveDomain]}</span>
-          )}
-          {canFilterDepartment ? (
-            <select value={filters.department} onChange={(event) => setFilters((current) => ({ ...current, department: event.target.value }))}>
-              <option value={allOption}>全部部门</option>
-              {["IT部", "研发部", "运营中心", "外部供应商"].map((department) => <option key={department} value={department}>{department}</option>)}
+            {canSwitchDomain ? (
+              <select value={effectiveDomain} onChange={(event) => setFilters((current) => ({ ...current, domain: event.target.value as ReportDomain }))}>
+                {allowedDomains.map((domain) => <option key={domain} value={domain}>{domainLabels[domain]}</option>)}
+              </select>
+            ) : (
+              <span className="filter-chip">{domainLabels[effectiveDomain]}</span>
+            )}
+            {canFilterDepartment ? (
+              <select value={filters.department} onChange={(event) => setFilters((current) => ({ ...current, department: event.target.value }))}>
+                <option value={allOption}>全部部门</option>
+                {["IT部", "研发部", "运营中心", "外部供应商"].map((department) => <option key={department} value={department}>{department}</option>)}
+              </select>
+            ) : (
+              <span className="filter-chip">{activeUser.department} · 本人范围</span>
+            )}
+            <select value={filters.projectType} onChange={(event) => setFilters((current) => ({ ...current, projectType: event.target.value }))}>
+              <option value={allOption}>全部项目类型</option>
+              {unique(scopedProjects.map((project) => project.projectType)).map((type) => <option key={type} value={type}>{type}</option>)}
             </select>
-          ) : (
-            <span className="filter-chip">{activeUser.department} · 本人范围</span>
-          )}
-          <select value={filters.projectType} onChange={(event) => setFilters((current) => ({ ...current, projectType: event.target.value }))}>
-            <option value={allOption}>全部项目类型</option>
-            {unique(scopedProjects.map((project) => project.projectType)).map((type) => <option key={type} value={type}>{type}</option>)}
-          </select>
-          <select value={filters.implementation} onChange={(event) => setFilters((current) => ({ ...current, implementation: event.target.value }))}>
-            <option value={allOption}>全部实现方式</option>
-            {unique(scopedProjects.map((project) => project.implementation)).map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <select value={filters.stage} onChange={(event) => setFilters((current) => ({ ...current, stage: event.target.value }))}>
-            <option value={allOption}>全部阶段</option>
-            {unique(scopedProjects.map((project) => project.stage)).map((stage) => <option key={stage} value={stage}>{stage}</option>)}
-          </select>
-          <select value={filters.risk} onChange={(event) => setFilters((current) => ({ ...current, risk: event.target.value }))}>
-            <option value={allOption}>全部风险</option>
-            {unique(scopedProjects.map((project) => project.risk)).map((risk) => <option key={risk} value={risk}>{risk}</option>)}
-          </select>
-          {canFilterProjectOwner ? (
-            <select value={filters.projectOwner} onChange={(event) => setFilters((current) => ({ ...current, projectOwner: event.target.value }))}>
-              <option value={allOption}>全部项目经理</option>
-              {unique(scopedProjects.map((project) => project.owner)).map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+            <select value={filters.implementation} onChange={(event) => setFilters((current) => ({ ...current, implementation: event.target.value }))}>
+              <option value={allOption}>全部实现方式</option>
+              {unique(scopedProjects.map((project) => project.implementation)).map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
-          ) : null}
-          {canFilterProductOwner ? (
-            <select value={filters.productOwner} onChange={(event) => setFilters((current) => ({ ...current, productOwner: event.target.value }))}>
-              <option value={allOption}>全部产品负责人</option>
-              {productOwnerOptions.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+            <select value={filters.stage} onChange={(event) => setFilters((current) => ({ ...current, stage: event.target.value }))}>
+              <option value={allOption}>全部阶段</option>
+              {unique(scopedProjects.map((project) => project.stage)).map((stage) => <option key={stage} value={stage}>{stage}</option>)}
             </select>
-          ) : null}
-          {canFilterSupplierManager ? (
-            <select value={filters.supplierManager} onChange={(event) => setFilters((current) => ({ ...current, supplierManager: event.target.value }))}>
-              <option value={allOption}>全部供应商负责人</option>
-              {unique(scopedSuppliers.map((item) => item.manager)).map((manager) => <option key={manager} value={manager}>{manager}</option>)}
+            <select value={filters.risk} onChange={(event) => setFilters((current) => ({ ...current, risk: event.target.value }))}>
+              <option value={allOption}>全部风险</option>
+              {unique(scopedProjects.map((project) => project.risk)).map((risk) => <option key={risk} value={risk}>{risk}</option>)}
             </select>
-          ) : null}
-          <button className="btn secondary" onClick={resetFilters}>清空筛选</button>
-          <span className="filter-count">当前 {resultCount} 条对象 · {timeRanges.find((item) => item.value === filters.timeRange)?.label}</span>
-        </div>
+            {canFilterProjectOwner ? (
+              <select value={filters.projectOwner} onChange={(event) => setFilters((current) => ({ ...current, projectOwner: event.target.value }))}>
+                <option value={allOption}>全部项目经理</option>
+                {unique(scopedProjects.map((project) => project.owner)).map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+              </select>
+            ) : null}
+            {canFilterProductOwner ? (
+              <select value={filters.productOwner} onChange={(event) => setFilters((current) => ({ ...current, productOwner: event.target.value }))}>
+                <option value={allOption}>全部产品负责人</option>
+                {productOwnerOptions.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+              </select>
+            ) : null}
+            {canFilterSupplierManager ? (
+              <select value={filters.supplierManager} onChange={(event) => setFilters((current) => ({ ...current, supplierManager: event.target.value }))}>
+                <option value={allOption}>全部供应商负责人</option>
+                {unique(scopedSuppliers.map((item) => item.manager)).map((manager) => <option key={manager} value={manager}>{manager}</option>)}
+              </select>
+            ) : null}
+            <button className="btn secondary" onClick={resetFilters}>清空筛选</button>
+          </div>
+        </FilterPanel>
       </div>
 
       <div className="grid-4">
@@ -795,6 +808,10 @@ function projectNameForFlow(projectId: string) {
 
 function matchesSelect(value: string, selected: string) {
   return selected === allOption || value === selected;
+}
+
+function countActiveFilters<T extends Record<string, string>>(filters: T, defaults: T) {
+  return Object.keys(filters).filter((key) => filters[key].trim() !== defaults[key]).length;
 }
 
 function matchesPerson(value: string, selected: string) {

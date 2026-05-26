@@ -2,6 +2,7 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { productWorkflowItems } from "../data";
 import { DemandProjectFlowBoard } from "../components/DemandProjectFlowBoard";
+import { FilterPanel } from "../components/FilterPanel";
 import type { DeliveryRequest, Demand, DemandProjectFlow, FlowActionId, FlowActionLog, FlowBoardAction, FlowNode, RoleId, RoleOption } from "../types";
 import { MetricCard, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
 
@@ -173,6 +174,16 @@ export function ProductWorkflow({
   const selectedFlow = filteredFlows.find((flow) => flow.id === selectedFlowId) ?? filteredFlows[0];
   const selectedFlowLogs = selectedFlow ? flowActionLogs.filter((log) => log.flowId === selectedFlow.id) : [];
   const productActions = selectedFlow ? getProductFlowActions(activeRole, selectedFlow) : [];
+  const activeFilterCount = countActiveFilters(filters, {
+    keyword: "",
+    demandStatus: allOption,
+    priority: allOption,
+    implementation: allOption,
+    owner: allOption,
+    flowStage: allOption,
+    flowStatus: allOption,
+    flowMode: allOption
+  });
   const resetFilters = () =>
     setFilters({
       keyword: "",
@@ -202,45 +213,45 @@ export function ProductWorkflow({
       </div>
 
       <div className="panel">
-        <SectionHeader eyebrow="FILTERS" title="产品协作筛选" />
-        <div className="filter-bar">
-          <input
-            aria-label="按需求、流程、负责人搜索"
-            placeholder="搜索需求 / 流程 / 负责人"
-            value={filters.keyword}
-            onChange={(event) => setFilters((current) => ({ ...current, keyword: event.target.value }))}
-          />
-          <select value={filters.demandStatus} onChange={(event) => setFilters((current) => ({ ...current, demandStatus: event.target.value }))}>
-            <option value={allOption}>全部需求状态</option>
-            {unique(liveDemands.map((demand) => demand.status)).map((status) => <option key={status} value={status}>{status}</option>)}
-          </select>
-          <select value={filters.priority} onChange={(event) => setFilters((current) => ({ ...current, priority: event.target.value }))}>
-            <option value={allOption}>全部优先级</option>
-            {["P0", "P1", "P2", "P3"].map((priority) => <option key={priority} value={priority}>{priority}</option>)}
-          </select>
-          <select value={filters.implementation} onChange={(event) => setFilters((current) => ({ ...current, implementation: event.target.value }))}>
-            <option value={allOption}>全部实现方式</option>
-            {unique(liveDemands.map((demand) => demand.implementation)).map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <select value={filters.owner} onChange={(event) => setFilters((current) => ({ ...current, owner: event.target.value }))}>
-            <option value={allOption}>全部负责人</option>
-            {workflowOwnerOptions.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
-          </select>
-          <select value={filters.flowStage} onChange={(event) => setFilters((current) => ({ ...current, flowStage: event.target.value }))}>
-            <option value={allOption}>全部流程阶段</option>
-            {flowStageOptions.map((stage) => <option key={stage} value={stage}>{stage}</option>)}
-          </select>
-          <select value={filters.flowStatus} onChange={(event) => setFilters((current) => ({ ...current, flowStatus: event.target.value }))}>
-            <option value={allOption}>全部流程状态</option>
-            {flowStatusOptions.map((status) => <option key={status} value={status}>{status}</option>)}
-          </select>
-          <select value={filters.flowMode} onChange={(event) => setFilters((current) => ({ ...current, flowMode: event.target.value }))}>
-            <option value={allOption}>全部转化模式</option>
-            {unique(flows.map((flow) => flow.mode)).map((mode) => <option key={mode} value={mode}>{mode}</option>)}
-          </select>
-          <button className="btn secondary" onClick={resetFilters}>清空筛选</button>
-          <span className="filter-count">需求 {filteredDemands.length} / {liveDemands.length} · 流程 {filteredFlows.length} / {flows.length}</span>
-        </div>
+        <FilterPanel eyebrow="FILTERS" title="产品协作筛选" summary={`需求 ${filteredDemands.length} / ${liveDemands.length} · 流程 ${filteredFlows.length} / ${flows.length}`} activeCount={activeFilterCount}>
+          <div className="filter-bar">
+            <input
+              aria-label="按需求、流程、负责人搜索"
+              placeholder="搜索需求 / 流程 / 负责人"
+              value={filters.keyword}
+              onChange={(event) => setFilters((current) => ({ ...current, keyword: event.target.value }))}
+            />
+            <select value={filters.demandStatus} onChange={(event) => setFilters((current) => ({ ...current, demandStatus: event.target.value }))}>
+              <option value={allOption}>全部需求状态</option>
+              {unique(liveDemands.map((demand) => demand.status)).map((status) => <option key={status} value={status}>{status}</option>)}
+            </select>
+            <select value={filters.priority} onChange={(event) => setFilters((current) => ({ ...current, priority: event.target.value }))}>
+              <option value={allOption}>全部优先级</option>
+              {["P0", "P1", "P2", "P3"].map((priority) => <option key={priority} value={priority}>{priority}</option>)}
+            </select>
+            <select value={filters.implementation} onChange={(event) => setFilters((current) => ({ ...current, implementation: event.target.value }))}>
+              <option value={allOption}>全部实现方式</option>
+              {unique(liveDemands.map((demand) => demand.implementation)).map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+            <select value={filters.owner} onChange={(event) => setFilters((current) => ({ ...current, owner: event.target.value }))}>
+              <option value={allOption}>全部负责人</option>
+              {workflowOwnerOptions.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+            </select>
+            <select value={filters.flowStage} onChange={(event) => setFilters((current) => ({ ...current, flowStage: event.target.value }))}>
+              <option value={allOption}>全部流程阶段</option>
+              {flowStageOptions.map((stage) => <option key={stage} value={stage}>{stage}</option>)}
+            </select>
+            <select value={filters.flowStatus} onChange={(event) => setFilters((current) => ({ ...current, flowStatus: event.target.value }))}>
+              <option value={allOption}>全部流程状态</option>
+              {flowStatusOptions.map((status) => <option key={status} value={status}>{status}</option>)}
+            </select>
+            <select value={filters.flowMode} onChange={(event) => setFilters((current) => ({ ...current, flowMode: event.target.value }))}>
+              <option value={allOption}>全部转化模式</option>
+              {unique(flows.map((flow) => flow.mode)).map((mode) => <option key={mode} value={mode}>{mode}</option>)}
+            </select>
+            <button className="btn secondary" onClick={resetFilters}>清空筛选</button>
+          </div>
+        </FilterPanel>
       </div>
 
       <div className="workflow-lane">
@@ -400,6 +411,10 @@ function unique(values: string[]) {
 
 function matchesSelect(value: string, selected: string) {
   return selected === allOption || value === selected;
+}
+
+function countActiveFilters<T extends Record<string, string>>(filters: T, defaults: T) {
+  return Object.keys(filters).filter((key) => filters[key].trim() !== defaults[key]).length;
 }
 
 function matchesPerson(value: string, selected: string) {

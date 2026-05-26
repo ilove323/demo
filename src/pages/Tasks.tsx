@@ -1,6 +1,7 @@
 import { Clock, MoveRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { resourceCalendars } from "../data";
+import { FilterPanel } from "../components/FilterPanel";
 import type { Project, RoleId, RoleOption, Task, TaskPresetFilter, TaskStatus } from "../types";
 import { ScheduleCalendar } from "../components/ScheduleCalendar";
 import { Modal, ProgressBar, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
@@ -98,6 +99,14 @@ export function Tasks({
       }),
     [baseCalendarEntries, filters]
   );
+  const activeFilterCount = countActiveFilters(filters, {
+    keyword: "",
+    project: allOption,
+    status: allOption,
+    role: allOption,
+    owner: allOption,
+    due: "all"
+  });
   const resetFilters = () => setFilters({ keyword: "", project: allOption, status: allOption, role: allOption, owner: allOption, due: "all" });
 
   useEffect(() => {
@@ -125,39 +134,40 @@ export function Tasks({
       </div>
 
       <div className="panel">
-        <div className="filter-bar">
-          <input
-            aria-label="按任务、项目、负责人搜索"
-            placeholder="搜索任务 / 项目 / 负责人"
-            value={filters.keyword}
-            onChange={(event) => setFilters((currentFilters) => ({ ...currentFilters, keyword: event.target.value }))}
-          />
-          <select value={filters.project} onChange={(event) => setFilters((currentFilters) => ({ ...currentFilters, project: event.target.value }))}>
-            <option value={allOption}>全部项目</option>
-            {projectOptions.map((project) => <option key={project} value={project}>{project}</option>)}
-          </select>
-          <select value={filters.status} onChange={(event) => setFilters((currentFilters) => ({ ...currentFilters, status: event.target.value }))}>
-            <option value={allOption}>全部状态</option>
-            {statuses.map((status) => <option key={status} value={status}>{status}</option>)}
-          </select>
-          <select value={filters.role} onChange={(event) => setFilters((currentFilters) => ({ ...currentFilters, role: event.target.value }))}>
-            <option value={allOption}>全部任务角色</option>
-            {roleOptions.map((role) => <option key={role} value={role}>{role}</option>)}
-          </select>
-          <select
-            disabled={!isRdOwner && ownerOptions.length <= 1}
-            value={filters.owner}
-            onChange={(event) => setFilters((currentFilters) => ({ ...currentFilters, owner: event.target.value }))}
-          >
-            <option value={allOption}>{isRdOwner ? "全部成员" : "本人可见人员"}</option>
-            {ownerOptions.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
-          </select>
-          <select value={filters.due} onChange={(event) => setFilters((currentFilters) => ({ ...currentFilters, due: event.target.value }))}>
-            {dueBuckets.map((bucket) => <option key={bucket.value} value={bucket.value}>{bucket.label}</option>)}
-          </select>
-          <button className="btn secondary" onClick={resetFilters}>清空筛选</button>
-          <span className="filter-count">显示 {filteredTasks.length} / {visibleTasks.length} 个任务</span>
-        </div>
+        <FilterPanel title="任务筛选" summary={`显示 ${filteredTasks.length} / ${visibleTasks.length} 个任务`} activeCount={activeFilterCount}>
+          <div className="filter-bar">
+            <input
+              aria-label="按任务、项目、负责人搜索"
+              placeholder="搜索任务 / 项目 / 负责人"
+              value={filters.keyword}
+              onChange={(event) => setFilters((currentFilters) => ({ ...currentFilters, keyword: event.target.value }))}
+            />
+            <select value={filters.project} onChange={(event) => setFilters((currentFilters) => ({ ...currentFilters, project: event.target.value }))}>
+              <option value={allOption}>全部项目</option>
+              {projectOptions.map((project) => <option key={project} value={project}>{project}</option>)}
+            </select>
+            <select value={filters.status} onChange={(event) => setFilters((currentFilters) => ({ ...currentFilters, status: event.target.value }))}>
+              <option value={allOption}>全部状态</option>
+              {statuses.map((status) => <option key={status} value={status}>{status}</option>)}
+            </select>
+            <select value={filters.role} onChange={(event) => setFilters((currentFilters) => ({ ...currentFilters, role: event.target.value }))}>
+              <option value={allOption}>全部任务角色</option>
+              {roleOptions.map((role) => <option key={role} value={role}>{role}</option>)}
+            </select>
+            <select
+              disabled={!isRdOwner && ownerOptions.length <= 1}
+              value={filters.owner}
+              onChange={(event) => setFilters((currentFilters) => ({ ...currentFilters, owner: event.target.value }))}
+            >
+              <option value={allOption}>{isRdOwner ? "全部成员" : "本人可见人员"}</option>
+              {ownerOptions.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+            </select>
+            <select value={filters.due} onChange={(event) => setFilters((currentFilters) => ({ ...currentFilters, due: event.target.value }))}>
+              {dueBuckets.map((bucket) => <option key={bucket.value} value={bucket.value}>{bucket.label}</option>)}
+            </select>
+            <button className="btn secondary" onClick={resetFilters}>清空筛选</button>
+          </div>
+        </FilterPanel>
         <ScheduleCalendar
           title="我的排期日历"
           subtitle={`${currentDeveloper} · 日/周/月查看每天 task 与所属项目`}
@@ -238,6 +248,10 @@ function unique(values: string[]) {
 
 function matchesSelect(value: string, selected: string) {
   return selected === allOption || value === selected;
+}
+
+function countActiveFilters<T extends Record<string, string>>(filters: T, defaults: T) {
+  return Object.keys(filters).filter((key) => filters[key].trim() !== defaults[key]).length;
 }
 
 function matchesDueBucket(due: string, bucket: string) {

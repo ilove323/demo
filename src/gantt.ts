@@ -10,6 +10,7 @@ export interface GanttBar {
   progress?: number;
   lane?: number;
   invalid?: boolean;
+  detailItems?: { label: string; value: string }[];
 }
 
 export interface GanttRow {
@@ -41,6 +42,7 @@ export function buildProjectGanttGroups(projects: Project[], tasks: Task[]): Gan
       const projectTasks = taskByProject.get(project.id) ?? [];
       const range = projectDateRange(project, projectTasks, index + groupIndex);
       const nextMilestone = project.milestones.find((milestone) => milestone.status !== "完成") ?? project.milestones.at(-1);
+      const nextMilestoneText = nextMilestone ? `${nextMilestone.name} ${nextMilestone.date}` : "暂无里程碑";
       return {
         id: project.id,
         label: project.name,
@@ -56,7 +58,17 @@ export function buildProjectGanttGroups(projects: Project[], tasks: Task[]): Gan
             end: range.end,
             tone: projectTone(project.id),
             progress: project.progress,
-            meta: `${project.id} · ${project.taskIds.length} 个关联任务`
+            meta: `${project.id} · ${project.taskIds.length} 个关联任务`,
+            detailItems: [
+              { label: "项目", value: project.name },
+              { label: "阶段", value: project.stage },
+              { label: "起止", value: `${range.start} 至 ${range.end}` },
+              { label: "负责人", value: project.owner },
+              { label: "进度", value: `${project.progress}%` },
+              { label: "风险", value: `${project.risk} · ${project.riskReason}` },
+              { label: "AI 结论", value: `${project.aiScore.recommendation} · ${project.aiScore.total}分` },
+              { label: "下一里程碑", value: nextMilestoneText }
+            ]
           }
         ]
       };
@@ -86,6 +98,7 @@ export function buildResourceGanttGroups(resourcePeople: ResourcePerson[], calen
       const entries = calendarByPersonProject.get(`${person.name}::${allocation.project}`) ?? [];
       const range = resourceDateRange(entries, allocationIndex, personIndex);
       const load = Math.round((allocation.hours / Math.max(person.capacity, 1)) * 100);
+      const entrySummary = entries.length > 0 ? `${entries.length} 条排期 · ${entries.reduce((sum, entry) => sum + entry.hours, 0)}h` : "暂无日历排期";
       return {
         id: `${person.name}-${allocation.project}-${allocationIndex}`,
         label: `${shortProjectName(allocation.project)} ${load}%`,
@@ -95,7 +108,17 @@ export function buildResourceGanttGroups(resourcePeople: ResourcePerson[], calen
         progress: load,
         meta: project ? allocation.work : `数据异常：未匹配项目 ${allocation.project}`,
         lane: allocationIndex % 2,
-        invalid: !project
+        invalid: !project,
+        detailItems: [
+          { label: "人员", value: person.name },
+          { label: "角色", value: person.role },
+          { label: "任务", value: allocation.work },
+          { label: "项目", value: allocation.project },
+          { label: "起止", value: `${range.start} 至 ${range.end}` },
+          { label: "投入", value: `${allocation.hours}h · ${entrySummary}` },
+          { label: "状态", value: allocation.status },
+          { label: "负载", value: `${person.assigned}/${person.capacity}h · ${loadStatus(Math.round((person.assigned / Math.max(person.capacity, 1)) * 100))}` }
+        ]
       };
     });
 

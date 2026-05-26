@@ -18,6 +18,7 @@ export function ScheduleCalendar({
 }) {
   const [mode, setMode] = useState<CalendarViewMode>(defaultMode);
   const [cursorDate, setCursorDate] = useState(() => entries[0]?.date ?? "2026-05-25");
+  const [selectedEntry, setSelectedEntry] = useState<ResourceCalendarEntry | null>(null);
   const orderedEntries = useMemo(
     () =>
       [...entries].sort((a, b) =>
@@ -33,7 +34,7 @@ export function ScheduleCalendar({
   return (
     <div className="schedule-calendar">
       <SectionHeader
-        eyebrow="RESOURCE CALENDAR"
+        eyebrow="排期日历"
         title={title}
         action={<CalendarToggle value={mode} onChange={(value) => setMode(value)} />}
       />
@@ -62,7 +63,7 @@ export function ScheduleCalendar({
             ))}
           </div>
           <div className="calendar-day-list">
-            {dayEntries.length > 0 ? dayEntries.map((entry) => <ScheduleBlock entry={entry} key={scheduleEntryKey(entry)} />) : (
+            {dayEntries.length > 0 ? dayEntries.map((entry) => <ScheduleBlock entry={entry} key={scheduleEntryKey(entry)} onSelect={setSelectedEntry} selected={selectedEntry ? scheduleEntryKey(selectedEntry) === scheduleEntryKey(entry) : false} />) : (
               <div className="calendar-empty">当天暂无排期</div>
             )}
           </div>
@@ -78,7 +79,7 @@ export function ScheduleCalendar({
                   <span>{day.label}</span>
                   <strong>{day.month}/{day.day}</strong>
                 </div>
-                {entriesForDay.length > 0 ? entriesForDay.map((entry) => <ScheduleBlock entry={entry} key={scheduleEntryKey(entry)} />) : (
+                {entriesForDay.length > 0 ? entriesForDay.map((entry) => <ScheduleBlock entry={entry} key={scheduleEntryKey(entry)} onSelect={setSelectedEntry} selected={selectedEntry ? scheduleEntryKey(selectedEntry) === scheduleEntryKey(entry) : false} />) : (
                   <div className="calendar-empty">无排期</div>
                 )}
               </div>
@@ -98,7 +99,7 @@ export function ScheduleCalendar({
                   <strong>{day.day}</strong>
                 </div>
                 {entriesForDay.slice(0, 2).map((entry) => (
-                  <ScheduleBlock compact entry={entry} key={scheduleEntryKey(entry)} />
+                  <ScheduleBlock compact entry={entry} key={scheduleEntryKey(entry)} onSelect={setSelectedEntry} selected={selectedEntry ? scheduleEntryKey(selectedEntry) === scheduleEntryKey(entry) : false} />
                 ))}
                 {entriesForDay.length > 2 ? <small>另 {entriesForDay.length - 2} 项</small> : null}
                 {totalHours > 0 ? <em>{totalHours}h</em> : null}
@@ -107,20 +108,56 @@ export function ScheduleCalendar({
           })}
         </div>
       ) : null}
+      {selectedEntry ? (
+        <div className="calendar-selected-detail">
+          <div>
+            <strong>{selectedEntry.task}</strong>
+            <StatusTag tone={toneForStatus(selectedEntry.status)}>{selectedEntry.status}</StatusTag>
+          </div>
+          <CalendarDetailItems entry={selectedEntry} />
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function ScheduleBlock({ entry, compact = false }: { entry: ResourceCalendarEntry; compact?: boolean }) {
+function ScheduleBlock({
+  entry,
+  compact = false,
+  selected = false,
+  onSelect
+}: {
+  entry: ResourceCalendarEntry;
+  compact?: boolean;
+  selected?: boolean;
+  onSelect: (entry: ResourceCalendarEntry) => void;
+}) {
   return (
-    <article className={compact ? "schedule-block compact" : "schedule-block"}>
+    <button className={`${compact ? "schedule-block compact" : "schedule-block"} tone-${toneForStatus(entry.status)}${selected ? " selected" : ""}`} type="button" onClick={() => onSelect(entry)}>
       <div>
         <span>{entry.timeSlot} · {entry.hours}h</span>
         <StatusTag tone={toneForStatus(entry.status)}>{entry.status}</StatusTag>
       </div>
       <strong>{entry.task}</strong>
       <p>{entry.project}</p>
-    </article>
+      <span className="calendar-detail-card" role="tooltip">
+        <strong>{entry.task}</strong>
+        <CalendarDetailItems entry={entry} />
+      </span>
+    </button>
+  );
+}
+
+function CalendarDetailItems({ entry }: { entry: ResourceCalendarEntry }) {
+  return (
+    <span className="calendar-detail-items">
+      <span><small>人员</small><b>{entry.person}</b></span>
+      <span><small>日期</small><b>{entry.date}</b></span>
+      <span><small>时段</small><b>{entry.timeSlot} · {entry.hours}h</b></span>
+      <span><small>任务</small><b>{entry.taskId}</b></span>
+      <span><small>项目</small><b>{entry.projectId} · {entry.project}</b></span>
+      <span><small>状态</small><b>{entry.status}</b></span>
+    </span>
   );
 }
 

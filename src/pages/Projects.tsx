@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { demands, projectDependencies, projectRules } from "../data";
+import { FilterPanel } from "../components/FilterPanel";
 import { GanttTimeline } from "../components/GanttTimeline";
 import { buildProjectGanttGroups } from "../gantt";
 import type { DeliveryRequest, DemandProjectFlow, FlowActionId, FlowActionLog, FlowBoardAction, Project, ProjectActionLog, ProjectStage, RoleId, RoleOption, Task, TaskPresetFilter, Tone } from "../types";
@@ -131,6 +132,15 @@ export function Projects({
     [filters.implementation, filters.keyword, projectByDemandId, projectById, visibleDeliveryRequests]
   );
   const getRelatedProject = (request: DeliveryRequest) => (request.projectId ? projectById.get(request.projectId) : projectByDemandId.get(request.demandId));
+  const activeFilterCount = countActiveFilters(filters, {
+    keyword: "",
+    projectType: allOption,
+    implementation: allOption,
+    stage: allOption,
+    risk: allOption,
+    owner: allOption,
+    supplierManager: allOption
+  });
   const resetFilters = () =>
     setFilters({
       keyword: "",
@@ -153,42 +163,43 @@ export function Projects({
 
       <div className="panel">
         <SectionHeader eyebrow="PROJECTS" title="项目视图" action={<ViewToggle value={viewMode} onChange={setViewMode} />} />
-        <div className="filter-bar">
-          <input
-            aria-label="按项目、需求、负责人搜索"
-            placeholder="搜索项目 / 需求 / 负责人 / 供应商"
-            value={filters.keyword}
-            onChange={(event) => setFilters((current) => ({ ...current, keyword: event.target.value }))}
-          />
-          <select value={filters.projectType} onChange={(event) => setFilters((current) => ({ ...current, projectType: event.target.value }))}>
-            <option value={allOption}>全部项目类型</option>
-            {unique(visibleProjects.map((project) => project.projectType)).map((type) => <option key={type} value={type}>{type}</option>)}
-          </select>
-          <select value={filters.implementation} onChange={(event) => setFilters((current) => ({ ...current, implementation: event.target.value }))}>
-            <option value={allOption}>全部协作模式</option>
-            {unique(visibleProjects.map((project) => project.implementation)).map((implementation) => (
-              <option key={implementation} value={implementation}>{implementation}</option>
-            ))}
-          </select>
-          <select value={filters.stage} onChange={(event) => setFilters((current) => ({ ...current, stage: event.target.value }))}>
-            <option value={allOption}>全部阶段</option>
-            {unique(visibleProjects.map((project) => project.stage)).map((stage) => <option key={stage} value={stage}>{stage}</option>)}
-          </select>
-          <select value={filters.risk} onChange={(event) => setFilters((current) => ({ ...current, risk: event.target.value }))}>
-            <option value={allOption}>全部风险</option>
-            {unique(visibleProjects.map((project) => project.risk)).map((risk) => <option key={risk} value={risk}>{risk}</option>)}
-          </select>
-          <select value={filters.owner} onChange={(event) => setFilters((current) => ({ ...current, owner: event.target.value }))}>
-            <option value={allOption}>全部项目经理</option>
-            {ownerOptions.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
-          </select>
-          <select value={filters.supplierManager} onChange={(event) => setFilters((current) => ({ ...current, supplierManager: event.target.value }))}>
-            <option value={allOption}>全部供应商负责人</option>
-            {supplierManagerOptions.map((manager) => <option key={manager} value={manager}>{manager}</option>)}
-          </select>
-          <button className="btn secondary" onClick={resetFilters}>清空筛选</button>
-          <span className="filter-count">显示 {filteredProjects.length} / {visibleProjects.length} 个项目</span>
-        </div>
+        <FilterPanel title="项目筛选" summary={`显示 ${filteredProjects.length} / ${visibleProjects.length} 个项目`} activeCount={activeFilterCount}>
+          <div className="filter-bar">
+            <input
+              aria-label="按项目、需求、负责人搜索"
+              placeholder="搜索项目 / 需求 / 负责人 / 供应商"
+              value={filters.keyword}
+              onChange={(event) => setFilters((current) => ({ ...current, keyword: event.target.value }))}
+            />
+            <select value={filters.projectType} onChange={(event) => setFilters((current) => ({ ...current, projectType: event.target.value }))}>
+              <option value={allOption}>全部项目类型</option>
+              {unique(visibleProjects.map((project) => project.projectType)).map((type) => <option key={type} value={type}>{type}</option>)}
+            </select>
+            <select value={filters.implementation} onChange={(event) => setFilters((current) => ({ ...current, implementation: event.target.value }))}>
+              <option value={allOption}>全部协作模式</option>
+              {unique(visibleProjects.map((project) => project.implementation)).map((implementation) => (
+                <option key={implementation} value={implementation}>{implementation}</option>
+              ))}
+            </select>
+            <select value={filters.stage} onChange={(event) => setFilters((current) => ({ ...current, stage: event.target.value }))}>
+              <option value={allOption}>全部阶段</option>
+              {unique(visibleProjects.map((project) => project.stage)).map((stage) => <option key={stage} value={stage}>{stage}</option>)}
+            </select>
+            <select value={filters.risk} onChange={(event) => setFilters((current) => ({ ...current, risk: event.target.value }))}>
+              <option value={allOption}>全部风险</option>
+              {unique(visibleProjects.map((project) => project.risk)).map((risk) => <option key={risk} value={risk}>{risk}</option>)}
+            </select>
+            <select value={filters.owner} onChange={(event) => setFilters((current) => ({ ...current, owner: event.target.value }))}>
+              <option value={allOption}>全部项目经理</option>
+              {ownerOptions.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+            </select>
+            <select value={filters.supplierManager} onChange={(event) => setFilters((current) => ({ ...current, supplierManager: event.target.value }))}>
+              <option value={allOption}>全部供应商负责人</option>
+              {supplierManagerOptions.map((manager) => <option key={manager} value={manager}>{manager}</option>)}
+            </select>
+            <button className="btn secondary" onClick={resetFilters}>清空筛选</button>
+          </div>
+        </FilterPanel>
         {viewMode === "gantt" ? (
           <GanttTimeline
             groups={projectGanttGroups}
@@ -481,6 +492,10 @@ function unique(values: string[]) {
 
 function matchesSelect(value: string, selected: string) {
   return selected === allOption || value === selected;
+}
+
+function countActiveFilters<T extends Record<string, string>>(filters: T, defaults: T) {
+  return Object.keys(filters).filter((key) => filters[key].trim() !== defaults[key]).length;
 }
 
 function formatMoney(value: number) {
