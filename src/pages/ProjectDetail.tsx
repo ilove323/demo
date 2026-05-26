@@ -2,7 +2,7 @@ import { ArrowLeft, Bot, BrainCircuit } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { DemandProjectFlowBoard } from "../components/DemandProjectFlowBoard";
 import { ProgressBar, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
-import { projectDependencies, users } from "../data";
+import { projectDependencies, projectRules, users } from "../data";
 import { getProjectManagerActions } from "./Projects";
 import type { DeliveryRequest, Demand, DemandProjectFlow, FlowActionId, FlowActionLog, Project, ProjectActionLog, ProjectStage, RoleId, RoleOption, Task, TaskPresetFilter } from "../types";
 
@@ -58,8 +58,8 @@ export function ProjectDetail({
   const missingTaskIds = project.taskIds.filter((taskId) => !taskById.has(taskId));
   const selectedFlowLogs = flow ? flowActionLogs.filter((log) => log.flowId === flow.id) : [];
   const selectedProjectLogs = projectActionLogs.filter((log) => log.projectId === project.id);
-  const managerActions = flow ? getProjectManagerActions(activeRole, flow) : [];
-  const canOpenTasks = ["admin", "pm", "itOwner", "rdOwner", "developer"].includes(activeRole);
+  const managerActions = flow ? getProjectManagerActions(activeRole, flow, project, selectedProjectTasks) : [];
+  const canOpenTasks = ["admin", "pm", "developer"].includes(activeRole);
   const relatedDependencies = projectDependencies.filter((item) => item.project === project.name || item.target === project.name);
 
   useEffect(() => {
@@ -112,6 +112,22 @@ export function ProjectDetail({
         </article>
       </div>
 
+      {flow ? (
+        <div className="panel project-swimlane-panel">
+          <SectionHeader
+            title="0-6 阶段泳道图"
+            action={<StatusTag tone={toneForStatus(flow.nodes.find((node) => node.id === flow.currentNodeId)?.status ?? project.stage)}>{flow.nodes.find((node) => node.id === flow.currentNodeId)?.name ?? project.stage}</StatusTag>}
+          />
+          <DemandProjectFlowBoard
+            flow={flow}
+            actions={managerActions}
+            actionTitle="项目经理业务动作"
+            logs={selectedFlowLogs}
+            onApplyAction={onApplyFlowAction}
+          />
+        </div>
+      ) : null}
+
       <div className="detail-layout">
         <div className="detail-main">
           <div className="panel ai-score-panel">
@@ -142,47 +158,11 @@ export function ProjectDetail({
             </div>
           </div>
 
-          {flow ? (
-            <div className="panel">
-              <SectionHeader title="协作链路与项目经理动作" />
-              <DemandProjectFlowBoard
-                flow={flow}
-                actions={managerActions}
-                actionTitle="项目经理业务动作"
-                logs={selectedFlowLogs}
-                onApplyAction={onApplyFlowAction}
-              />
-            </div>
-          ) : null}
-
-          {["admin", "pm", "itOwner"].includes(activeRole) ? (
+          {["admin", "pm"].includes(activeRole) ? (
             <div className="panel">
               <SectionHeader title="项目治理操作" />
-              {activeRole === "itOwner" ? (
-                <div className="assignment-strip">
-                  <div>
-                    <strong>分配项目负责人</strong>
-                    <span>{project.name} · 当前负责人：{project.owner}</span>
-                  </div>
-                  <div className="assignment-controls">
-                    <select className="inline-select" value={projectAssignee} onChange={(event) => setProjectAssignee(event.target.value)}>
-                      {projectManagerOptions.map((name) => <option key={name} value={name}>{name}</option>)}
-                    </select>
-                    <button
-                      className="btn"
-                      type="button"
-                      disabled={!projectAssignee || projectAssignee === project.owner}
-                      onClick={() => onAssignWork(projectAssignee, "project", project.id, `${project.name} 项目治理和供应商交付`)}
-                    >
-                      分配给{projectAssignee || "项目经理"}
-                    </button>
-                  </div>
-                </div>
-              ) : null}
               <div className="project-command-grid">
-                <button className="btn" type="button" onClick={() => onAdvanceProjectStage(project.id)}>推进交付阶段</button>
-                <button className="btn secondary" type="button" onClick={() => onUpdateProjectRecord(project.id, { riskResponse: `${project.riskResponse} 已追加每日例会和供应商问题清单。` }, "追加每日例会和供应商问题清单")}>更新风险应对</button>
-                <button className="btn secondary" type="button" onClick={() => onApplyFlowAction(flow?.id ?? "", "pm.submitArchive")} disabled={!flow}>提交上线归档</button>
+                <button className="btn secondary" type="button" onClick={() => onUpdateProjectRecord(project.id, { riskResponse: `${project.riskResponse} 已追加每日例会和问题清单。` }, "追加每日例会和问题清单")}>更新风险应对</button>
               </div>
               <div className="form-grid project-record-form">
                 <label className="wide">风险原因<textarea value={recordDraft} onChange={(event) => setRecordDraft(event.target.value)} /></label>
@@ -230,9 +210,29 @@ export function ProjectDetail({
 
         <aside className="detail-side">
           <div className="panel">
-            <SectionHeader title="阶段计划" />
-            <div className="stage-strip vertical">
-              {project.stages.map((stage) => <span className={stage.done ? "done" : ""} key={stage.name}>{stage.name}</span>)}
+            <SectionHeader title="阶段计划与交付物" />
+            <div className="project-stage-plan">
+              {project.stages.map((stage) => {
+                const rule = projectRules.find((item) => item.stage === stage.name);
+                const isCurrent = project.stage === stage.name;
+                return (
+                  <article className={stage.done ? "stage-plan-card done" : "stage-plan-card"} key={stage.name}>
+                    <div>
+                      <strong>{stage.name}</strong>
+                      <StatusTag tone={stage.done ? "green" : isCurrent ? "blue" : "gray"}>{isCurrent ? "当前阶段" : stage.done ? "已完成" : "待推进"}</StatusTag>
+                    </div>
+                    {rule ? (
+                      <>
+                        <p>{rule.deliverable}</p>
+                        <div className="compact-grid">
+                          <span>负责人：{rule.owner}</span>
+                          <span>验收：{rule.acceptance}</span>
+                        </div>
+                      </>
+                    ) : null}
+                  </article>
+                );
+              })}
             </div>
           </div>
 
@@ -267,9 +267,18 @@ export function ProjectDetail({
           <div className="panel">
             <SectionHeader title="依赖关系" />
             {relatedDependencies.length > 0 ? (
-              <ul className="timeline">
-                {relatedDependencies.map((item) => <li key={`${item.project}${item.target}`}>{item.relation}：{item.target} · {item.status}</li>)}
-              </ul>
+              <div className="dependency-list">
+                {relatedDependencies.map((item) => (
+                  <article className="dependency-card" key={`${item.project}${item.target}`}>
+                    <div>
+                      <strong>{item.relation}：{item.target}</strong>
+                      <StatusTag tone={toneForStatus(item.status)}>{item.status}</StatusTag>
+                    </div>
+                    <p>{item.impact}</p>
+                    <span>{item.project === project.name ? "当前项目依赖外部事项" : "其他项目依赖当前项目"}</span>
+                  </article>
+                ))}
+              </div>
             ) : (
               <div className="empty-state table-empty"><strong>暂无依赖</strong><span>当前项目未配置显性父子或阻塞关系。</span></div>
             )}

@@ -166,11 +166,11 @@ export function ProductWorkflow({
       }),
     [deliveryRequests, filteredDemandIds, filters, liveDemands]
   );
-  const pendingAnalysis = filteredDemands.filter((demand) => ["待产品承接", "产品评估中"].includes(demand.status));
-  const acceptance = filteredDemands.filter((demand) => demand.status === "待验收");
+  const pendingAnalysis = filteredDemands.filter((demand) => demand.status === "需求评审");
+  const acceptance = filteredDemands.filter((demand) => demand.status === "项目验收");
   const productEvaluationItems = filteredWorkflowItems.filter((item) => item.stage === "产品评估").length;
   const projectRequestItems = filteredWorkflowItems.filter((item) => item.stage === "项目申请").length;
-  const pendingDeliveryRequests = filteredDeliveryRequests.filter((item) => ["草稿", "退回补充", "待项目经理受理"].includes(item.status));
+  const pendingDeliveryRequests = filteredDeliveryRequests.filter((item) => ["草稿", "退回方案确认", "待项目经理启动"].includes(item.status));
   const selectedFlow = filteredFlows.find((flow) => flow.id === selectedFlowId) ?? filteredFlows[0];
   const selectedFlowLogs = selectedFlow ? flowActionLogs.filter((log) => log.flowId === selectedFlow.id) : [];
   const productActions = selectedFlow ? getProductFlowActions(activeRole, selectedFlow) : [];
@@ -207,9 +207,9 @@ export function ProductWorkflow({
 
       <div className="grid-4">
         <MetricCard label="待承接/评估" value={String(pendingAnalysis.length)} delta="产品侧待推进" tone="orange" />
-        <MetricCard label="项目申请" value={String(pendingDeliveryRequests.length + projectRequestItems)} delta="待提交或待受理" tone="cyan" />
+        <MetricCard label="项目申请" value={String(pendingDeliveryRequests.length + projectRequestItems)} delta="待提交或项目启动" tone="cyan" />
         <MetricCard label="产品评估项" value={String(productEvaluationItems)} delta="范围 / 方案 / 资源 / 供应商" tone="violet" />
-        <MetricCard label="待组织验收" value={String(acceptance.length)} delta="运营中心待评分" tone="green" />
+        <MetricCard label="待组织验收" value={String(acceptance.length)} delta="业务部门待评分" tone="green" />
       </div>
 
       <div className="panel">
@@ -318,7 +318,7 @@ export function ProductWorkflow({
               </select>
             }
           />
-          {["admin", "itOwner"].includes(activeRole) ? (
+          {["admin", "pm"].includes(activeRole) ? (
             <div className="assignment-strip">
               <div>
                 <strong>产品指派与承接启动</strong>
@@ -423,71 +423,47 @@ function matchesPerson(value: string, selected: string) {
 
 function getProductFlowActions(activeRole: RoleId, flow: DemandProjectFlow): FlowBoardAction[] {
   if (!["admin", "product"].includes(activeRole)) return [];
-  const nodeStatus = (id: string) => flow.nodes.find((node) => node.id === id)?.status;
+  const isCurrent = (id: string) => flow.currentNodeId === id;
   return [
     {
-      id: "product.acceptDemand",
-      label: "确认承接",
-      description: "确认接手 IT负责人指派的需求，进入产品评估。",
-      stage: "产品指派与承接启动",
+      id: "product.returnDemand",
+      label: "打回需求",
+      description: "背景、目标、价值或验收边界不足时，打回给需求方补充。",
+      stage: "阶段1：需求评审",
+      tone: "orange",
+      impact: ["泳道回到阶段0草稿", "需求状态变为已打回", "操作留言写入记录和通知"],
+      disabled: !isCurrent("demandReview"),
+      disabledReason: "只有需求评审阶段可打回需求。"
+    },
+    {
+      id: "product.submitSolution",
+      label: "发起方案确认",
+      description: "提交解决方案、资源投入测算和 AI 评分，交给需求方确认。",
+      stage: "阶段1：需求评审",
       tone: "blue",
-      disabled: nodeStatus("evaluate") === "已完成"
+      impact: ["泳道推进到阶段2方案确认", "需求方收到方案确认通知", "操作留言写入记录和通知"],
+      disabled: !isCurrent("demandReview"),
+      disabledReason: "只有需求评审阶段可发起方案确认。"
     },
     {
-      id: "product.returnForSupplement",
-      label: "退回补充",
-      description: "业务范围、验收标准或合规条件不足时退回运营补充。",
-      stage: "产品评估",
-      tone: "orange",
-      disabled: nodeStatus("evaluate") === "待开始"
-    },
-    {
-      id: "product.saveEvaluation",
-      label: "保存产品评估",
-      description: "保存价值、范围、实现方式、资源测算、供应商意见和验收标准。",
-      stage: "产品评估",
-      tone: "violet",
-      disabled: nodeStatus("evaluate") === "待开始"
-    },
-    {
-      id: "product.submitDeliveryRequest",
-      label: "提交项目申请",
-      description: "把产品评估结论、实现方式、资源测算和验收标准提交给项目经理受理。",
-      stage: "项目申请",
-      tone: "orange",
-      disabled: ["已受理", "已批准"].includes(flow.resourceRequest.status)
-    },
-    {
-      id: "product.withdrawDeliveryRequest",
-      label: "撤回项目申请",
-      description: "项目申请尚未受理时撤回，回到产品评估补充。",
-      stage: "项目申请",
-      tone: "gray",
-      disabled: !["待项目经理受理", "待审批"].includes(flow.resourceRequest.status)
-    },
-    {
-      id: "product.startAcceptance",
-      label: "发起验收",
-      description: "邀请运营中心进行业务验收和评分。",
-      stage: "验收组织",
-      tone: "green",
-      disabled: nodeStatus("develop") !== "进行中"
-    },
-    {
-      id: "product.recordAcceptanceIssue",
-      label: "记录验收问题",
-      description: "验收未通过时记录问题，通知项目经理和开发整改。",
-      stage: "验收组织",
+      id: "product.returnExecution",
+      label: "退回项目进行",
+      description: "验收不通过时退回项目进行阶段继续整改。",
+      stage: "阶段5：项目验收",
       tone: "red",
-      disabled: nodeStatus("acceptance") === "待开始"
+      impact: ["泳道回到阶段4项目进行", "项目状态改为项目进行", "项目经理和开发收到整改通知"],
+      disabled: !isCurrent("projectAcceptance"),
+      disabledReason: "只有项目验收阶段可退回整改。"
     },
     {
-      id: "product.closeDemand",
-      label: "关闭需求",
-      description: "验收通过后关闭需求，完成产品侧闭环。",
-      stage: "验收组织",
+      id: "product.completeAcceptance",
+      label: "验收完成",
+      description: "产品经理确认项目交付通过，进入需求方最终评分。",
+      stage: "阶段5：项目验收",
       tone: "green",
-      disabled: nodeStatus("acceptance") !== "待确认" && nodeStatus("online") !== "已完成"
+      impact: ["泳道推进到阶段6验收完成", "需求方收到评分通知", "操作留言写入记录和通知"],
+      disabled: !isCurrent("projectAcceptance"),
+      disabledReason: "只有项目验收阶段可确认验收完成。"
     }
   ];
 }

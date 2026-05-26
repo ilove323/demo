@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 
-export type RoleId = "admin" | "executive" | "pm" | "itOwner" | "product" | "requester" | "opsOwner" | "developer" | "rdOwner";
+export type RoleId = "admin" | "executive" | "pm" | "product" | "requester" | "businessOwner" | "developer";
 
 export type PageId =
   | "dashboard"
@@ -22,11 +22,12 @@ export type PageId =
 
 export type ProfileTab = "personal" | "notifications";
 
-export type DemandStatus = "待业务确认" | "待产品承接" | "产品评估中" | "待项目受理" | "交付中" | "待验收" | "已完成" | "暂停";
+export type WorkflowStageId = "draft" | "demandReview" | "solutionConfirm" | "projectStart" | "projectExecution" | "projectAcceptance" | "acceptedComplete";
+export type DemandStatus = "草稿" | "需求评审" | "方案确认" | "项目启动" | "项目进行" | "项目验收" | "验收完成" | "已打回" | "已放弃";
 export type Priority = "P0" | "P1" | "P2" | "P3";
 export type ImplementationType = "内部实现" | "外部供应商" | "合作实现";
 export type ProjectType = "软件项目" | "硬件项目" | "软硬件协同";
-export type ProjectStage = "待受理" | "已立项" | "资源排期中" | "实施中" | "联调测试中" | "验收支持中" | "已上线" | "已归档";
+export type ProjectStage = "项目启动" | "项目进行" | "项目验收" | "验收完成";
 export type TaskStatus = "待开始" | "进行中" | "测试中" | "已完成" | "暂停";
 export type RiskLevel = "低" | "中" | "高";
 export type NotificationChannel = "站内信" | "企业微信" | "机器人";
@@ -162,7 +163,7 @@ export interface ProductWorkflowItem {
   artifacts: string[];
 }
 
-export type DeliveryRequestStatus = "草稿" | "待项目经理受理" | "已受理" | "退回补充" | "已立项" | "已关闭";
+export type DeliveryRequestStatus = "草稿" | "方案确认中" | "待项目经理启动" | "退回方案确认" | "项目进行" | "项目验收" | "已关闭";
 
 export interface DeliveryRequest {
   id: string;
@@ -179,17 +180,20 @@ export interface DeliveryRequest {
   decision: string;
 }
 
-export type FlowLane = "运营中心" | "产品经理" | "项目经理 / IT部" | "研发部 / 开发" | "外部供应商" | "高管关注";
+export type FlowLane = "需求方" | "产品经理" | "项目经理" | "开发" | "管理层";
 export type FlowNodeStatus = "待开始" | "进行中" | "待确认" | "已完成" | "风险";
 
 export interface FlowNode {
   id: string;
+  stageId?: WorkflowStageId;
+  stageNo?: number;
   name: string;
   lane: FlowLane;
   owner: string;
   status: FlowNodeStatus;
   deliverable: string;
   description: string;
+  completion?: string;
   configurable: boolean;
 }
 
@@ -265,6 +269,7 @@ export interface Worklog {
 
 export interface Task {
   id: string;
+  parentTaskId?: string;
   title: string;
   projectId: string;
   project: string;
@@ -275,6 +280,7 @@ export interface Task {
   due: string;
   role: string;
   description: string;
+  progressNote?: string;
   worklogs: Worklog[];
 }
 
@@ -418,31 +424,21 @@ export interface RoleNotificationSubscription {
 }
 
 export type FlowActionId =
-  | "product.acceptDemand"
-  | "product.returnForSupplement"
-  | "product.saveEvaluation"
-  | "product.submitScopeConfirm"
-  | "product.decideImplementation"
-  | "product.startSupplierEvaluation"
-  | "product.createResourceEstimate"
-  | "product.submitDeliveryRequest"
-  | "product.withdrawDeliveryRequest"
-  | "product.startAcceptance"
-  | "product.recordAcceptanceIssue"
-  | "product.closeDemand"
-  | "pm.acceptDeliveryRequest"
-  | "pm.returnDeliveryRequest"
-  | "pm.createProject"
-  | "pm.linkProject"
-  | "pm.generateResourcePlan"
-  | "pm.confirmResourceSchedule"
-  | "pm.assignSupplier"
-  | "pm.updateBudget"
-  | "pm.updateRiskResponse"
-  | "pm.updateSupplierDelivery"
-  | "pm.enterIntegrationTest"
-  | "pm.enterAcceptanceSupport"
-  | "pm.submitArchive";
+  | "requester.submitReview"
+  | "product.returnDemand"
+  | "product.submitSolution"
+  | "requester.abandonDemand"
+  | "requester.submitProjectRequest"
+  | "pm.startProject"
+  | "pm.returnSolution"
+  | "pm.assignDevelopers"
+  | "developer.createTask"
+  | "developer.updateProgress"
+  | "developer.completeTask"
+  | "pm.submitAcceptance"
+  | "product.completeAcceptance"
+  | "product.returnExecution"
+  | "requester.submitScore";
 
 export interface FlowBoardAction {
   id: FlowActionId;
@@ -450,6 +446,8 @@ export interface FlowBoardAction {
   description: string;
   stage: string;
   tone: Tone;
+  impact?: string[];
+  disabledReason?: string;
   disabled?: boolean;
 }
 
@@ -462,6 +460,7 @@ export interface FlowActionLog {
   targetNodeId: string;
   time: string;
   summary: string;
+  note?: string;
 }
 
 export interface ProjectActionLog {

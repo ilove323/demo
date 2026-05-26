@@ -79,9 +79,11 @@ export function ScheduleCalendar({
                   <span>{day.label}</span>
                   <strong>{day.month}/{day.day}</strong>
                 </div>
-                {entriesForDay.length > 0 ? entriesForDay.map((entry) => <ScheduleBlock entry={entry} key={scheduleEntryKey(entry)} onSelect={setSelectedEntry} selected={selectedEntry ? scheduleEntryKey(selectedEntry) === scheduleEntryKey(entry) : false} />) : (
-                  <div className="calendar-empty">无排期</div>
-                )}
+                <div className="calendar-cell-events">
+                  {entriesForDay.length > 0 ? entriesForDay.map((entry) => <ScheduleBlock entry={entry} key={scheduleEntryKey(entry)} onSelect={setSelectedEntry} selected={selectedEntry ? scheduleEntryKey(selectedEntry) === scheduleEntryKey(entry) : false} />) : (
+                    <div className="calendar-empty">无排期</div>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -98,10 +100,12 @@ export function ScheduleCalendar({
                   <span>{day.label}</span>
                   <strong>{day.day}</strong>
                 </div>
-                {entriesForDay.slice(0, 2).map((entry) => (
-                  <ScheduleBlock compact entry={entry} key={scheduleEntryKey(entry)} onSelect={setSelectedEntry} selected={selectedEntry ? scheduleEntryKey(selectedEntry) === scheduleEntryKey(entry) : false} />
-                ))}
-                {entriesForDay.length > 2 ? <small>另 {entriesForDay.length - 2} 项</small> : null}
+                <div className="calendar-cell-events">
+                  {entriesForDay.slice(0, 2).map((entry) => (
+                    <ScheduleBlock compact entry={entry} key={scheduleEntryKey(entry)} onSelect={setSelectedEntry} selected={selectedEntry ? scheduleEntryKey(selectedEntry) === scheduleEntryKey(entry) : false} />
+                  ))}
+                  {entriesForDay.length > 2 ? <small>另 {entriesForDay.length - 2} 项</small> : null}
+                </div>
                 {totalHours > 0 ? <em>{totalHours}h</em> : null}
               </div>
             );

@@ -2,33 +2,42 @@ import { ArrowLeft, Star } from "lucide-react";
 import { useState } from "react";
 import { DemandProjectFlowBoard } from "../components/DemandProjectFlowBoard";
 import { Modal, ProgressBar, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
-import type { AcceptanceReview, Demand, DemandProjectFlow, Priority, RoleOption } from "../types";
+import type { AcceptanceReview, Demand, DemandProjectFlow, FlowActionId, FlowActionLog, FlowBoardAction, Priority, RoleId, RoleOption } from "../types";
 
 const priorities: Priority[] = ["P0", "P1", "P2", "P3"];
 
 export function DemandDetail({
   demand,
   flow,
+  activeRole,
   activeUser,
+  flowActionLogs,
   canAdjustPriority,
   onBack,
   onPriorityChange,
   onSubmitReview,
+  onApplyFlowAction,
   onAssignWork
 }: {
   demand: Demand;
   flow?: DemandProjectFlow;
+  activeRole: RoleId;
   activeUser: RoleOption;
+  flowActionLogs: FlowActionLog[];
   canAdjustPriority: boolean;
   onBack: () => void;
   onPriorityChange: (id: string, priority: Priority) => void;
   onSubmitReview: (id: string, review: AcceptanceReview) => void;
+  onApplyFlowAction: (flowId: string, actionId: FlowActionId, note?: string) => void;
   onAssignWork: (targetUserName: string, relatedType: "demand" | "project" | "task" | "resource" | "flow", relatedId: string, summary: string) => void;
 }) {
   const [reviewing, setReviewing] = useState(false);
   const [reviewScore, setReviewScore] = useState(String(demand.acceptanceReview?.score ?? "4.7"));
   const [reviewConclusion, setReviewConclusion] = useState(demand.acceptanceReview?.conclusion ?? "通过验收");
   const [reviewComment, setReviewComment] = useState(demand.acceptanceReview?.comment ?? "交付结果符合业务预期，关键流程可正常使用。");
+
+  const demandActions = flow ? getDemandDetailActions(activeRole, flow) : [];
+  const selectedFlowLogs = flow ? flowActionLogs.filter((log) => log.flowId === flow.id) : [];
 
   function submitReview() {
     onSubmitReview(demand.id, {
@@ -38,6 +47,9 @@ export function DemandDetail({
       reviewer: demand.requester,
       date: "2026-05-26"
     });
+    if (flow) {
+      onApplyFlowAction(flow.id, "requester.submitScore", `${reviewConclusion}，评分 ${reviewScore}/5：${reviewComment}`);
+    }
     setReviewing(false);
   }
 
@@ -105,8 +117,14 @@ export function DemandDetail({
 
           {flow ? (
             <div className="panel">
-              <SectionHeader title="需求到项目协作链路" />
-              <DemandProjectFlowBoard flow={flow} />
+              <SectionHeader title="0-6 阶段泳道图" />
+              <DemandProjectFlowBoard
+                flow={flow}
+                actions={demandActions}
+                actionTitle="需求与产品业务动作"
+                logs={selectedFlowLogs}
+                onApplyAction={onApplyFlowAction}
+              />
             </div>
           ) : null}
 
@@ -119,7 +137,7 @@ export function DemandDetail({
                 <span className="muted-text">{demand.acceptanceReview.reviewer} · {demand.acceptanceReview.date}</span>
               </div>
             ) : (
-              <div className="empty-state"><strong>待业务验收评分</strong><span>等待运营提交验收结论。</span></div>
+              <div className="empty-state"><strong>待业务验收评分</strong><span>等待业务提交验收结论。</span></div>
             )}
           </div>
         </div>
@@ -188,4 +206,100 @@ export function DemandDetail({
       </Modal>
     </section>
   );
+}
+
+function getDemandDetailActions(activeRole: RoleId, flow: DemandProjectFlow): FlowBoardAction[] {
+  const canRequesterAct = ["admin", "requester", "businessOwner"].includes(activeRole);
+  const canProductAct = ["admin", "product"].includes(activeRole);
+  const isCurrent = (id: string) => flow.currentNodeId === id;
+  const actions: FlowBoardAction[] = [];
+  if (canRequesterAct) {
+    actions.push(
+      {
+        id: "requester.submitReview",
+        label: "发起需求评审",
+        description: "草稿补齐后提交给产品经理评审。",
+        stage: "阶段0：草稿",
+        tone: "blue",
+        impact: ["泳道推进到阶段1需求评审", "产品经理收到评审通知", "操作留言写入记录和通知"],
+        disabled: !isCurrent("draft"),
+        disabledReason: "只有草稿阶段可发起需求评审。"
+      },
+      {
+        id: "requester.abandonDemand",
+        label: "放弃需求",
+        description: "方案确认阶段放弃需求，流程关闭为只读。",
+        stage: "阶段2：方案确认",
+        tone: "orange",
+        impact: ["流程关闭", "需求状态变为已放弃", "产品经理和项目经理收到通知"],
+        disabled: !isCurrent("solutionConfirm"),
+        disabledReason: "只有方案确认阶段可放弃需求。"
+      },
+      {
+        id: "requester.submitProjectRequest",
+        label: "发起项目申请",
+        description: "确认产品方案后发起项目申请，交由唯一项目经理判断资源并启动。",
+        stage: "阶段2：方案确认",
+        tone: "green",
+        impact: ["泳道推进到阶段3项目启动", "项目经理收到启动判断通知", "操作留言写入记录和通知"],
+        disabled: !isCurrent("solutionConfirm"),
+        disabledReason: "只有方案确认阶段可发起项目申请。"
+      },
+      {
+        id: "requester.submitScore",
+        label: "提交评分",
+        description: "产品验收完成后，需求方提交 1-5 分和评价并关闭流程。",
+        stage: "阶段6：验收完成",
+        tone: "green",
+        impact: ["流程关闭为只读", "评分写入需求详情", "管理层报表可查看评分"],
+        disabled: !isCurrent("acceptedComplete"),
+        disabledReason: "只有验收完成阶段可提交评分。"
+      }
+    );
+  }
+  if (canProductAct) {
+    actions.push(
+      {
+        id: "product.returnDemand",
+        label: "打回需求",
+        description: "资料不足时打回需求方补充。",
+        stage: "阶段1：需求评审",
+        tone: "orange",
+        impact: ["泳道回到阶段0草稿", "需求状态变为已打回", "操作留言写入记录和通知"],
+        disabled: !isCurrent("demandReview"),
+        disabledReason: "只有需求评审阶段可打回。"
+      },
+      {
+        id: "product.submitSolution",
+        label: "发起方案确认",
+        description: "提交解决方案、资源投入测算和 AI 评分给需求方确认。",
+        stage: "阶段1：需求评审",
+        tone: "blue",
+        impact: ["泳道推进到阶段2方案确认", "需求方收到确认通知", "操作留言写入记录和通知"],
+        disabled: !isCurrent("demandReview"),
+        disabledReason: "只有需求评审阶段可发起方案确认。"
+      },
+      {
+        id: "product.returnExecution",
+        label: "退回项目进行",
+        description: "项目验收不通过时退回开发整改。",
+        stage: "阶段5：项目验收",
+        tone: "red",
+        impact: ["泳道回到阶段4项目进行", "项目经理和开发收到整改通知", "操作留言写入记录和通知"],
+        disabled: !isCurrent("projectAcceptance"),
+        disabledReason: "只有项目验收阶段可退回整改。"
+      },
+      {
+        id: "product.completeAcceptance",
+        label: "验收完成",
+        description: "产品经理确认验收通过，进入需求方最终评分。",
+        stage: "阶段5：项目验收",
+        tone: "green",
+        impact: ["泳道推进到阶段6验收完成", "需求方收到评分通知", "操作留言写入记录和通知"],
+        disabled: !isCurrent("projectAcceptance"),
+        disabledReason: "只有项目验收阶段可完成验收。"
+      }
+    );
+  }
+  return actions;
 }

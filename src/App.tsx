@@ -15,7 +15,7 @@ import { Resources } from "./pages/Resources";
 import { DepartmentSettings, NotificationSettings, RoleSettings, UserSettings } from "./pages/SystemSettings";
 import { Tasks } from "./pages/Tasks";
 import { ProductWorkflow } from "./pages/ProductWorkflow";
-import type { AcceptanceReview, DeliveryRequest, Demand, DemandProjectFlow, FlowActionId, FlowActionLog, FlowNode, NotificationItem, PageId, Priority, ProfileTab, Project, ProjectActionLog, ProjectStage, RoleId, RoleOption, Task, TaskPresetFilter, TaskStatus } from "./types";
+import type { AcceptanceReview, DeliveryRequest, Demand, DemandProjectFlow, FlowActionId, FlowActionLog, FlowNode, NotificationItem, PageId, Priority, ProfileTab, Project, ProjectActionLog, ProjectStage, RoleId, RoleOption, Task, TaskPresetFilter, TaskStatus, WorkflowStageId } from "./types";
 
 export default function App() {
   const [activePage, setActivePage] = useState<PageId>("dashboard");
@@ -42,9 +42,9 @@ export default function App() {
   );
   const visibleDemands = useMemo(() => {
     if (activeRole === "requester") return demands.filter((demand) => demand.requester === role.userName);
-    if (role.isDepartmentOwner) return demands.filter((demand) => demand.team === role.department);
+    if (activeRole === "businessOwner") return demands.filter((demand) => demand.team === role.department);
     return demands;
-  }, [activeRole, demands, role.department, role.isDepartmentOwner, role.userName]);
+  }, [activeRole, demands, role.department, role.userName]);
   const unreadCount = roleNotifications.filter((item) => item.unread).length;
   const visibleNavItems = useMemo(() => {
     const access = roleAccessPreviews.find((item) => item.roleId === activeRole);
@@ -101,7 +101,7 @@ export default function App() {
           ? {
               ...demand,
               priority,
-              priorityHistory: [`2026-05-25 部门负责人调整为 ${priority}`, ...demand.priorityHistory]
+              priorityHistory: [`2026-05-25 需求方负责人调整为 ${priority}`, ...demand.priorityHistory]
             }
           : demand
       )
@@ -115,7 +115,7 @@ export default function App() {
           ? {
               ...demand,
               score: review.score,
-              status: "已完成",
+              status: "验收完成",
               progress: 100,
               acceptanceReview: review,
               lifecycleSteps: demand.lifecycleSteps.map((step) => ({ ...step, done: true, current: false }))
@@ -126,10 +126,16 @@ export default function App() {
   }
 
   function changeTaskStatus(id: string, status: TaskStatus) {
+    const task = tasks.find((item) => item.id === id);
     setTasks((items) => items.map((task) => (task.id === id ? { ...task, status } : task)));
+    if (task && status === "已完成") {
+      const flow = demandProjectFlows.find((item) => item.projectId === task.projectId);
+      if (flow) applyFlowAction(flow.id, "developer.completeTask", `${task.title} 已完成。`);
+    }
   }
 
   function addWorklog(id: string, hours: number, note: string) {
+    const task = tasks.find((item) => item.id === id);
     setTasks((items) =>
       items.map((task) =>
         task.id === id
@@ -138,9 +144,40 @@ export default function App() {
               actual: task.actual + hours,
               worklogs: [{ date: "2026-05-25", hours, note }, ...task.worklogs]
             }
-          : task
+        : task
       )
     );
+    if (task) {
+      const flow = demandProjectFlows.find((item) => item.projectId === task.projectId);
+      if (flow) applyFlowAction(flow.id, "developer.updateProgress", `${task.title} 登记 ${hours}h：${note}`);
+    }
+  }
+
+  function createTask(projectId: string, parentTaskId: string | undefined, title: string, estimate: number, due: string, note: string) {
+    const project = projects.find((item) => item.id === projectId);
+    if (!project) return;
+    const newTask: Task = {
+      id: `TASK-${Date.now().toString().slice(-6)}`,
+      parentTaskId,
+      title,
+      projectId,
+      project: project.name,
+      owner: role.userName,
+      status: "待开始",
+      estimate,
+      actual: 0,
+      due,
+      role: "开发",
+      description: note,
+      progressNote: note,
+      worklogs: []
+    };
+    setTasks((items) => [newTask, ...items]);
+    setProjects((items) => items.map((item) => (item.id === projectId ? { ...item, taskIds: [newTask.id, ...item.taskIds] } : item)));
+    const flow = demandProjectFlows.find((item) => item.projectId === projectId);
+    if (flow) {
+      applyFlowAction(flow.id, "developer.createTask", parentTaskId ? `从 ${parentTaskId} 拆分：${note}` : note);
+    }
   }
 
   function updateFlowNode(flowId: string, nodeId: string, patch: Partial<FlowNode>) {
@@ -161,7 +198,7 @@ export default function App() {
       setProjects((items) => items.map((project) => (project.id === relatedId ? { ...project, owner: targetUserName, supplierManager: targetUserName } : project)));
     }
     if (relatedType === "demand") {
-      setDemands((items) => items.map((demand) => (demand.id === relatedId ? { ...demand, handler: `${targetUserName} / 产品`, status: "产品评估中", progress: Math.max(demand.progress, 24) } : demand)));
+      setDemands((items) => items.map((demand) => (demand.id === relatedId ? { ...demand, handler: `${targetUserName} / 产品`, status: "需求评审", progress: Math.max(demand.progress, 24) } : demand)));
       setDemandProjectFlows((items) =>
         items.map((flow) =>
           flow.demandId === relatedId
@@ -216,7 +253,8 @@ export default function App() {
         actionName: action.name,
         targetNodeId,
         time: nowText(),
-        summary: withActionNote(action.summary(flow, demand, project), note)
+        summary: withActionNote(action.summary(flow, demand, project), note),
+        note: note.trim() || undefined
       },
       ...items
     ]);
@@ -237,7 +275,7 @@ export default function App() {
       type: patch.risk || patch.riskResponse ? "风险应对更新" : "项目记录修改",
       level: patch.risk === "高" ? "red" : "orange",
       channel: "站内信",
-      targetRoles: patch.risk === "高" ? ["executive", "itOwner"] : ["pm", "itOwner", "product"],
+      targetRoles: patch.risk === "高" ? ["executive", "pm"] : ["pm", "product"],
       targetUserNames: project ? [project.owner] : undefined,
       sourceUserName: role.userName,
       relatedType: "project",
@@ -273,9 +311,9 @@ export default function App() {
       title: `${project.name} 阶段推进到 ${stage}`,
       content: `${role.userName} 将交付阶段推进到 ${stage}，请相关负责人同步处理后续事项。`,
       type: "交付阶段推进",
-      level: stage === "已上线" ? "green" : "blue",
+      level: stage === "验收完成" ? "green" : "blue",
       channel: "站内信",
-      targetRoles: ["product", "pm", "itOwner", "opsOwner"],
+      targetRoles: ["product", "pm", "businessOwner"],
       targetUserNames: relatedFlow ? [...relatedFlow.assignments.map((item) => item.person), project.owner] : [project.owner],
       sourceUserName: role.userName,
       relatedType: "project",
@@ -346,11 +384,14 @@ export default function App() {
         <DemandDetail
           demand={detailDemand}
           flow={demandProjectFlows.find((flow) => flow.demandId === detailDemand.id)}
+          activeRole={activeRole}
           activeUser={role}
-          canAdjustPriority={activeRole === "admin" || activeRole === "product" || Boolean(role.isDepartmentOwner)}
+          flowActionLogs={flowActionLogs}
+          canAdjustPriority={activeRole === "admin" || activeRole === "businessOwner"}
           onBack={closeDetail}
           onPriorityChange={updateDemandPriority}
           onSubmitReview={submitAcceptanceReview}
+          onApplyFlowAction={applyFlowAction}
           onAssignWork={assignWork}
         />
       ) : null}
@@ -380,7 +421,7 @@ export default function App() {
       {activePage === "demands" ? (
         <Demands
           demands={visibleDemands}
-          canAdjustPriority={activeRole === "admin" || activeRole === "product" || Boolean(role.isDepartmentOwner)}
+          canAdjustPriority={activeRole === "admin" || activeRole === "businessOwner"}
           onPriorityChange={updateDemandPriority}
           onOpenDetail={openDemandDetail}
         />
@@ -417,7 +458,7 @@ export default function App() {
           onOpenDetail={openProjectDetail}
         />
       ) : null}
-      {activePage === "tasks" ? <Tasks tasks={tasks} projects={projects} activeRole={activeRole} activeUser={role} presetFilter={taskPresetFilter} onStatusChange={changeTaskStatus} onAddWorklog={addWorklog} /> : null}
+      {activePage === "tasks" ? <Tasks tasks={tasks} projects={projects} activeRole={activeRole} activeUser={role} presetFilter={taskPresetFilter} onStatusChange={changeTaskStatus} onAddWorklog={addWorklog} onCreateTask={createTask} /> : null}
       {activePage === "resources" ? <Resources flows={demandProjectFlows} /> : null}
       {activePage === "reports" ? <Reports activeRole={activeRole} activeUser={role} demands={demands} tasks={tasks} flows={demandProjectFlows} /> : null}
       {activePage === "permissions" ? <Permissions activeRole={activeRole} /> : null}
@@ -453,151 +494,128 @@ export default function App() {
   );
 }
 
-const projectStageOrder: ProjectStage[] = ["待受理", "已立项", "资源排期中", "实施中", "联调测试中", "验收支持中", "已上线", "已归档"];
+const projectStageOrder: ProjectStage[] = ["项目启动", "项目进行", "项目验收", "验收完成"];
+const workflowStageOrder: WorkflowStageId[] = ["draft", "demandReview", "solutionConfirm", "projectStart", "projectExecution", "projectAcceptance", "acceptedComplete"];
 
-const flowActionTargetNode: Record<FlowActionId, string> = {
-  "product.acceptDemand": "evaluate",
-  "product.returnForSupplement": "businessConfirm",
-  "product.saveEvaluation": "evaluate",
-  "product.submitScopeConfirm": "businessConfirm",
-  "product.decideImplementation": "resource",
-  "product.startSupplierEvaluation": "resource",
-  "product.createResourceEstimate": "resource",
-  "product.submitDeliveryRequest": "resource",
-  "product.withdrawDeliveryRequest": "resource",
-  "product.startAcceptance": "acceptance",
-  "product.recordAcceptanceIssue": "acceptance",
-  "product.closeDemand": "online",
-  "pm.acceptDeliveryRequest": "iteration",
-  "pm.returnDeliveryRequest": "resource",
-  "pm.createProject": "iteration",
-  "pm.linkProject": "iteration",
-  "pm.generateResourcePlan": "iteration",
-  "pm.confirmResourceSchedule": "develop",
-  "pm.assignSupplier": "iteration",
-  "pm.updateBudget": "iteration",
-  "pm.updateRiskResponse": "iteration",
-  "pm.updateSupplierDelivery": "develop",
-  "pm.enterIntegrationTest": "develop",
-  "pm.enterAcceptanceSupport": "acceptance",
-  "pm.submitArchive": "online"
+const flowActionTargetNode: Record<FlowActionId, WorkflowStageId> = {
+  "requester.submitReview": "demandReview",
+  "product.returnDemand": "draft",
+  "product.submitSolution": "solutionConfirm",
+  "requester.abandonDemand": "acceptedComplete",
+  "requester.submitProjectRequest": "projectStart",
+  "pm.startProject": "projectExecution",
+  "pm.returnSolution": "solutionConfirm",
+  "pm.assignDevelopers": "projectExecution",
+  "developer.createTask": "projectExecution",
+  "developer.updateProgress": "projectExecution",
+  "developer.completeTask": "projectExecution",
+  "pm.submitAcceptance": "projectAcceptance",
+  "product.completeAcceptance": "acceptedComplete",
+  "product.returnExecution": "projectExecution",
+  "requester.submitScore": "acceptedComplete"
 };
 
 const flowActionMeta: Record<FlowActionId, { name: string; summary: (flow: DemandProjectFlow, demand?: Demand, project?: Project) => string }> = {
-  "product.acceptDemand": { name: "确认承接", summary: (_flow, demand) => `确认承接 ${demand?.name ?? "需求"}，进入产品评估。` },
-  "product.returnForSupplement": { name: "退回补充", summary: (_flow, demand) => `退回 ${demand?.name ?? "需求"}，要求运营补充业务范围或验收标准。` },
-  "product.saveEvaluation": { name: "保存评估", summary: (_flow, demand) => `保存 ${demand?.name ?? "需求"} 的价值、范围和可行性评估。` },
-  "product.submitScopeConfirm": { name: "提交产品评估", summary: (_flow, demand) => `提交 ${demand?.name ?? "需求"} 的业务范围、验收标准和实现判断，请运营负责人确认业务边界。` },
-  "product.decideImplementation": { name: "保存产品评估", summary: (flow) => `在产品评估中记录实现方式：${flow.mode}。` },
-  "product.startSupplierEvaluation": { name: "保存供应商评估", summary: (flow) => `在产品评估中记录 ${flow.mode} 的供应商/技术适配判断。` },
-  "product.createResourceEstimate": { name: "保存资源测算", summary: (flow) => `在产品评估中记录资源测算：${flow.resourceRequest.need}，预计 ${flow.resourceRequest.days} 天。` },
-  "product.submitDeliveryRequest": { name: "提交项目申请", summary: (flow) => `提交项目申请，包含产品评估、实现方式、资源测算和验收标准：${flow.resourceRequest.need}。` },
-  "product.withdrawDeliveryRequest": { name: "撤回项目申请", summary: (_flow, demand) => `撤回 ${demand?.name ?? "需求"} 的项目申请，回到产品评估补充。` },
-  "product.startAcceptance": { name: "发起验收", summary: (_flow, demand) => `邀请运营中心对 ${demand?.name ?? "需求"} 进行验收。` },
-  "product.recordAcceptanceIssue": { name: "记录验收问题", summary: (_flow, demand) => `记录 ${demand?.name ?? "需求"} 的验收问题，等待整改。` },
-  "product.closeDemand": { name: "关闭需求", summary: (_flow, demand) => `${demand?.name ?? "需求"} 已完成业务闭环。` },
-  "pm.acceptDeliveryRequest": { name: "受理项目申请", summary: (flow) => `受理 ${flow.resourceRequest.requester} 的项目申请，进入项目经理治理。` },
-  "pm.returnDeliveryRequest": { name: "退回补充", summary: (_flow, demand) => `退回 ${demand?.name ?? "需求"} 的项目申请，请产品经理补充材料。` },
-  "pm.createProject": { name: "转为新项目", summary: (_flow, _demand, project) => `${project?.name ?? "项目"} 已作为新项目进入立项。` },
-  "pm.linkProject": { name: "关联已有项目", summary: (_flow, _demand, project) => `项目申请已关联到 ${project?.name ?? "已有项目"}。` },
-  "pm.generateResourcePlan": { name: "生成资源计划", summary: (flow) => `生成资源计划：${flow.assignments.map((item) => `${item.person} ${item.hours}h`).join("、")}。` },
-  "pm.confirmResourceSchedule": { name: "确认资源排期", summary: (flow) => `确认资源排期并通知 ${flow.assignments.map((item) => item.person).join("、")}。` },
-  "pm.assignSupplier": { name: "指派供应商", summary: (_flow, _demand, project) => `确认 ${project?.name ?? "项目"} 的供应商交付负责人和合同跟进人。` },
-  "pm.updateBudget": { name: "更新预算记录", summary: (_flow, _demand, project) => `更新 ${project?.name ?? "项目"} 的预算使用和付款备注。` },
-  "pm.updateRiskResponse": { name: "更新风险应对", summary: (_flow, _demand, project) => `更新 ${project?.name ?? "项目"} 的风险应对措施。` },
-  "pm.updateSupplierDelivery": { name: "更新供应商交付状态", summary: (_flow, _demand, project) => `更新 ${project?.name ?? "项目"} 的供应商交付状态。` },
-  "pm.enterIntegrationTest": { name: "进入联调测试", summary: (_flow, _demand, project) => `${project?.name ?? "项目"} 进入联调测试。` },
-  "pm.enterAcceptanceSupport": { name: "进入验收支持", summary: (_flow, _demand, project) => `${project?.name ?? "项目"} 进入验收支持，由产品经理组织业务验收。` },
-  "pm.submitArchive": { name: "提交上线归档", summary: (_flow, _demand, project) => `${project?.name ?? "项目"} 已提交上线归档。` }
+  "requester.submitReview": { name: "发起需求评审", summary: (_flow, demand) => `${demand?.requester ?? "需求方"} 发起 ${demand?.name ?? "需求"} 评审。` },
+  "product.returnDemand": { name: "打回需求", summary: (_flow, demand) => `产品经理打回 ${demand?.name ?? "需求"}，要求需求方补充背景、目标或价值。` },
+  "product.submitSolution": { name: "发起方案确认", summary: (_flow, demand) => `产品经理完成 ${demand?.name ?? "需求"} 评审，提交方案、资源投入和 AI 评分给需求方确认。` },
+  "requester.abandonDemand": { name: "放弃需求", summary: (_flow, demand) => `${demand?.requester ?? "需求方"} 放弃 ${demand?.name ?? "需求"}，流程关闭。` },
+  "requester.submitProjectRequest": { name: "发起项目申请", summary: (flow) => `需求方确认方案并发起项目申请：${flow.resourceRequest.need}。` },
+  "pm.startProject": { name: "项目启动", summary: (_flow, _demand, project) => `唯一项目经理确认资源可用，启动 ${project?.name ?? "项目"}。` },
+  "pm.returnSolution": { name: "退回方案确认", summary: (_flow, demand) => `项目经理退回 ${demand?.name ?? "需求"} 的方案确认，请需求方和产品经理补充资源或范围。` },
+  "pm.assignDevelopers": { name: "指派开发", summary: (flow) => `项目经理指派开发：${flow.assignments.map((item) => item.person).join("、")}。` },
+  "developer.createTask": { name: "新增子任务", summary: (_flow, _demand, project) => `开发为 ${project?.name ?? "项目"} 新增子任务并估算工时。` },
+  "developer.updateProgress": { name: "汇报进度", summary: (_flow, _demand, project) => `开发更新 ${project?.name ?? "项目"} 任务进度和工时。` },
+  "developer.completeTask": { name: "完成任务", summary: (_flow, _demand, project) => `开发完成 ${project?.name ?? "项目"} 下的任务。` },
+  "pm.submitAcceptance": { name: "项目验收", summary: (_flow, _demand, project) => `项目经理确认任务全部完成，提交 ${project?.name ?? "项目"} 给产品经理验收。` },
+  "product.completeAcceptance": { name: "验收完成", summary: (_flow, demand) => `产品经理完成 ${demand?.name ?? "需求"} 的项目验收，等待需求方评分。` },
+  "product.returnExecution": { name: "退回项目进行", summary: (_flow, _demand, project) => `产品经理将 ${project?.name ?? "项目"} 退回项目进行阶段继续整改。` },
+  "requester.submitScore": { name: "提交评分", summary: (_flow, demand) => `${demand?.requester ?? "需求方"} 提交验收评分，${demand?.name ?? "需求"} 流程关闭。` }
 };
 
 function reduceFlowByAction(flow: DemandProjectFlow, actionId: FlowActionId): DemandProjectFlow {
-  if (actionId === "product.acceptDemand") return updateFlow(flow, "evaluate", { assign: "已完成", evaluate: "进行中" });
-  if (actionId === "product.returnForSupplement") return updateFlow(flow, "businessConfirm", { businessConfirm: "待确认" });
-  if (actionId === "product.saveEvaluation") return updateFlow(flow, "evaluate", { evaluate: "进行中" });
-  if (actionId === "product.submitScopeConfirm") return updateFlow(flow, "businessConfirm", { evaluate: "已完成", businessConfirm: "待确认" });
-  if (actionId === "product.decideImplementation") return updateFlow(flow, "resource", { businessConfirm: "已完成", resource: "待确认" });
-  if (actionId === "product.startSupplierEvaluation") return updateFlow(flow, "resource", { resource: "进行中" });
-  if (actionId === "product.createResourceEstimate") return { ...updateFlow(flow, "resource", { resource: "进行中" }), resourceRequest: { ...flow.resourceRequest, status: "测算中" } };
-  if (actionId === "product.submitDeliveryRequest") return { ...updateFlow(flow, "resource", { evaluate: "已完成", resource: "待确认" }), resourceRequest: { ...flow.resourceRequest, status: "待项目经理受理" } };
-  if (actionId === "product.withdrawDeliveryRequest") return { ...updateFlow(flow, "evaluate", { resource: "待开始", evaluate: "进行中" }), resourceRequest: { ...flow.resourceRequest, status: "已撤回" } };
-  if (actionId === "product.startAcceptance") return updateFlow(flow, "acceptance", { develop: "已完成", acceptance: "待确认" });
-  if (actionId === "product.recordAcceptanceIssue") return updateFlow(flow, "acceptance", { acceptance: "风险" });
-  if (actionId === "product.closeDemand") return { ...flow, currentNodeId: "online", nodes: flow.nodes.map((node) => ({ ...node, status: "已完成" })) };
-  if (actionId === "pm.acceptDeliveryRequest") return { ...updateFlow(flow, "iteration", { resource: "已完成", iteration: "进行中" }), resourceRequest: { ...flow.resourceRequest, status: "已受理" } };
-  if (actionId === "pm.returnDeliveryRequest") return { ...updateFlow(flow, "resource", { resource: "待确认" }), resourceRequest: { ...flow.resourceRequest, status: "退回补充" } };
-  if (actionId === "pm.createProject" || actionId === "pm.linkProject" || actionId === "pm.generateResourcePlan" || actionId === "pm.assignSupplier") return updateFlow(flow, "iteration", { iteration: "进行中" });
-  if (actionId === "pm.confirmResourceSchedule") return { ...updateFlow(flow, "develop", { iteration: "已完成", develop: "进行中" }), resourceRequest: { ...flow.resourceRequest, status: "已批准" } };
-  if (actionId === "pm.enterIntegrationTest") return updateFlow(flow, "develop", { develop: "进行中" });
-  if (actionId === "pm.enterAcceptanceSupport") return updateFlow(flow, "acceptance", { develop: "已完成", acceptance: "待确认" });
-  if (actionId === "pm.submitArchive") {
-    return { ...flow, currentNodeId: "online", resourceRequest: { ...flow.resourceRequest, status: "已批准" }, nodes: flow.nodes.map((node) => ({ ...node, status: "已完成" })) };
-  }
-  return flow;
-}
-
-function updateFlow(flow: DemandProjectFlow, currentNodeId: string, statuses: Record<string, string>): DemandProjectFlow {
+  const currentNodeId = flowActionTargetNode[actionId];
   return {
     ...flow,
     currentNodeId,
-    nodes: flow.nodes.map((node) => ({ ...node, status: (statuses[node.id] ?? node.status) as typeof node.status }))
+    resourceRequest: { ...flow.resourceRequest, status: deliveryStatusForAction(flow.resourceRequest.status, actionId) },
+    nodes: flow.nodes.map((node) => ({ ...node, status: flowNodeStatus(node.stageId ?? (node.id as WorkflowStageId), currentNodeId, actionId) }))
   };
 }
 
+function flowNodeStatus(stageId: WorkflowStageId, currentStage: WorkflowStageId, actionId: FlowActionId): FlowNode["status"] {
+  const nodeIndex = workflowStageOrder.indexOf(stageId);
+  const currentIndex = workflowStageOrder.indexOf(currentStage);
+  if (actionId === "requester.submitScore") return nodeIndex <= currentIndex ? "已完成" : "待开始";
+  if (actionId === "requester.abandonDemand") return nodeIndex === currentIndex ? "风险" : nodeIndex < currentIndex ? "已完成" : "待开始";
+  if (nodeIndex < currentIndex) return "已完成";
+  if (nodeIndex === currentIndex) return currentStage === "acceptedComplete" ? "待确认" : "进行中";
+  return "待开始";
+}
+
 function reduceDemandByFlowAction(demand: Demand, actionId: FlowActionId): Demand {
-  if (actionId === "product.acceptDemand" || actionId === "product.saveEvaluation") {
-    return { ...demand, status: "产品评估中", progress: Math.max(demand.progress, 35) };
+  const patch: Partial<Demand> = {};
+  if (actionId === "requester.submitReview") Object.assign(patch, { status: "需求评审", progress: Math.max(demand.progress, 14) });
+  if (actionId === "product.returnDemand") Object.assign(patch, { status: "已打回", progress: Math.max(demand.progress, 16) });
+  if (actionId === "product.submitSolution") Object.assign(patch, { status: "方案确认", progress: Math.max(demand.progress, 32) });
+  if (actionId === "requester.abandonDemand") Object.assign(patch, { status: "已放弃", progress: 100 });
+  if (actionId === "requester.submitProjectRequest") Object.assign(patch, { status: "项目启动", progress: Math.max(demand.progress, 45) });
+  if (["pm.startProject", "pm.assignDevelopers", "developer.createTask", "developer.updateProgress", "developer.completeTask", "product.returnExecution"].includes(actionId)) {
+    Object.assign(patch, { status: "项目进行", progress: Math.max(demand.progress, 64) });
   }
-  if (actionId === "product.returnForSupplement") {
-    return { ...demand, status: "待业务确认", progress: Math.max(demand.progress, 26) };
+  if (actionId === "pm.returnSolution") Object.assign(patch, { status: "方案确认", progress: Math.max(demand.progress, 38) });
+  if (actionId === "pm.submitAcceptance") Object.assign(patch, { status: "项目验收", progress: Math.max(demand.progress, 86) });
+  if (actionId === "product.completeAcceptance") Object.assign(patch, { status: "验收完成", progress: Math.max(demand.progress, 96) });
+  if (actionId === "requester.submitScore") {
+    Object.assign(patch, {
+      status: "验收完成",
+      progress: 100,
+      lifecycleSteps: demand.lifecycleSteps.map((step) => ({ ...step, done: true, current: false }))
+    });
   }
-  if (actionId === "product.submitScopeConfirm" || actionId === "product.decideImplementation" || actionId === "product.startSupplierEvaluation" || actionId === "product.createResourceEstimate") {
-    return { ...demand, status: "产品评估中", progress: Math.max(demand.progress, 42) };
-  }
-  if (actionId === "product.submitDeliveryRequest" || actionId === "pm.acceptDeliveryRequest" || actionId === "pm.confirmResourceSchedule") {
-    return { ...demand, status: actionId === "product.submitDeliveryRequest" ? "待项目受理" : "交付中", progress: Math.max(demand.progress, 55) };
-  }
-  if (actionId === "pm.enterAcceptanceSupport" || actionId === "product.startAcceptance") {
-    return { ...demand, status: "待验收", progress: Math.max(demand.progress, 86) };
-  }
-  if (actionId === "pm.submitArchive" || actionId === "product.closeDemand") {
-    return { ...demand, status: "已完成", progress: 100, lifecycleSteps: demand.lifecycleSteps.map((step) => ({ ...step, done: true, current: false })) };
-  }
-  return demand;
+  return { ...demand, ...patch };
 }
 
 function reduceProjectByFlowAction(project: Project, actionId: FlowActionId): Project {
-  if (actionId === "pm.acceptDeliveryRequest") return reduceProjectStage(project, "已立项");
-  if (actionId === "pm.createProject" || actionId === "pm.linkProject" || actionId === "pm.generateResourcePlan") return reduceProjectStage(project, "资源排期中");
-  if (actionId === "pm.confirmResourceSchedule") return reduceProjectStage(project, "实施中");
-  if (actionId === "pm.enterIntegrationTest") return reduceProjectStage(project, "联调测试中");
-  if (actionId === "pm.enterAcceptanceSupport" || actionId === "product.startAcceptance") return reduceProjectStage(project, "验收支持中");
-  if (actionId === "pm.submitArchive") return reduceProjectStage(project, "已归档");
-  if (actionId === "pm.updateRiskResponse") {
-    return { ...project, riskResponse: `${project.riskResponse} 已补充资源冲突预案和每日跟进机制。` };
+  if (actionId === "requester.submitProjectRequest" || actionId === "pm.returnSolution") return reduceProjectStage(project, "项目启动");
+  if (["pm.startProject", "pm.assignDevelopers", "developer.createTask", "developer.updateProgress", "developer.completeTask", "product.returnExecution"].includes(actionId)) {
+    return reduceProjectStage(project, "项目进行");
   }
-  if (actionId === "pm.updateBudget") return { ...project, usedBudget: Math.min(project.budget, project.usedBudget + 20000) };
-  if (actionId === "pm.updateSupplierDelivery") return { ...project, riskResponse: `${project.riskResponse} 已更新供应商交付状态和下一次检查点。` };
+  if (actionId === "pm.submitAcceptance") return reduceProjectStage(project, "项目验收");
+  if (actionId === "product.completeAcceptance" || actionId === "requester.submitScore") return reduceProjectStage(project, "验收完成");
   return project;
 }
 
 function syncFlowWithProjectStage(flow: DemandProjectFlow, stage: ProjectStage): DemandProjectFlow {
-  if (stage === "已立项" || stage === "资源排期中") return updateFlow(flow, "iteration", { resource: "已完成", iteration: "进行中" });
-  if (stage === "实施中") return updateFlow(flow, "develop", { iteration: "已完成", develop: "进行中" });
-  if (stage === "联调测试中") return updateFlow(flow, "develop", { develop: "进行中" });
-  if (stage === "验收支持中") return updateFlow(flow, "acceptance", { develop: "已完成", acceptance: "待确认" });
-  if (stage === "已上线" || stage === "已归档") return { ...flow, currentNodeId: "online", nodes: flow.nodes.map((node) => ({ ...node, status: "已完成" })) };
-  return updateFlow(flow, "evaluate", { submit: "已完成", evaluate: "进行中" });
+  const stageMap: Record<ProjectStage, WorkflowStageId> = {
+    项目启动: "projectStart",
+    项目进行: "projectExecution",
+    项目验收: "projectAcceptance",
+    验收完成: "acceptedComplete"
+  };
+  const currentNodeId = stageMap[stage];
+  return {
+    ...flow,
+    currentNodeId,
+    nodes: flow.nodes.map((node) => ({
+      ...node,
+      status: flowNodeStatus(node.stageId ?? (node.id as WorkflowStageId), currentNodeId, stage === "验收完成" ? "requester.submitScore" : "pm.startProject")
+    }))
+  };
 }
 
 function reduceDeliveryRequestByFlowAction(request: DeliveryRequest, actionId: FlowActionId): DeliveryRequest {
-  if (actionId === "product.submitDeliveryRequest") return { ...request, status: "待项目经理受理" };
-  if (actionId === "product.withdrawDeliveryRequest") return { ...request, status: "草稿" };
-  if (actionId === "pm.acceptDeliveryRequest") return { ...request, status: "已受理" };
-  if (actionId === "pm.returnDeliveryRequest") return { ...request, status: "退回补充" };
-  if (actionId === "pm.createProject" || actionId === "pm.linkProject" || actionId === "pm.confirmResourceSchedule") return { ...request, status: "已立项" };
-  if (actionId === "pm.submitArchive" || actionId === "product.closeDemand") return { ...request, status: "已关闭" };
-  return request;
+  return { ...request, status: deliveryStatusForAction(request.status, actionId) as DeliveryRequest["status"] };
+}
+
+function deliveryStatusForAction(current: string, actionId: FlowActionId) {
+  if (actionId === "product.submitSolution") return "方案确认中";
+  if (actionId === "requester.submitProjectRequest") return "待项目经理启动";
+  if (actionId === "pm.returnSolution") return "退回方案确认";
+  if (actionId === "pm.startProject" || actionId === "pm.assignDevelopers" || actionId.startsWith("developer")) return "项目进行";
+  if (actionId === "pm.submitAcceptance") return "项目验收";
+  if (actionId === "product.completeAcceptance" || actionId === "requester.submitScore" || actionId === "requester.abandonDemand") return "已关闭";
+  return current;
 }
 
 function reduceProjectStage(project: Project, stage: ProjectStage): Project {
@@ -615,14 +633,10 @@ function nextProjectStage(stage: ProjectStage): ProjectStage {
 
 function progressForStage(stage: ProjectStage) {
   const map: Record<ProjectStage, number> = {
-    待受理: 12,
-    已立项: 24,
-    资源排期中: 36,
-    实施中: 58,
-    联调测试中: 76,
-    验收支持中: 88,
-    已上线: 96,
-    已归档: 100
+    项目启动: 36,
+    项目进行: 68,
+    项目验收: 88,
+    验收完成: 100
   };
   return map[stage];
 }
@@ -633,113 +647,52 @@ function roleIdsForUsers(userNames: string[]): RoleId[] {
 
 function notificationForFlowAction(actionId: FlowActionId, actor: RoleOption, flow: DemandProjectFlow, demand?: Demand, project?: Project, note = ""): Omit<NotificationItem, "id" | "time" | "unread" | "targetRoles"> & { targetRoles?: RoleId[] } {
   const noteText = note.trim() ? `备注：${note.trim()}` : "";
-  const base = {
-    sourceUserName: actor.userName,
-    relatedType: "flow" as const,
-    relatedId: flow.id
+  const actionName = flowActionMeta[actionId].name;
+  const titleByAction: Record<FlowActionId, string> = {
+    "requester.submitReview": `${demand?.name ?? flow.title} 已发起需求评审`,
+    "product.returnDemand": `${demand?.name ?? flow.title} 已打回需求`,
+    "product.submitSolution": `${demand?.name ?? flow.title} 待需求方确认方案`,
+    "requester.abandonDemand": `${demand?.name ?? flow.title} 已放弃`,
+    "requester.submitProjectRequest": `${demand?.name ?? flow.title} 已发起项目申请`,
+    "pm.startProject": `${project?.name ?? flow.title} 已启动`,
+    "pm.returnSolution": `${demand?.name ?? flow.title} 退回方案确认`,
+    "pm.assignDevelopers": `${project?.name ?? flow.title} 已指派开发`,
+    "developer.createTask": `${project?.name ?? flow.title} 新增子任务`,
+    "developer.updateProgress": `${project?.name ?? flow.title} 进度已更新`,
+    "developer.completeTask": `${project?.name ?? flow.title} 任务已完成`,
+    "pm.submitAcceptance": `${project?.name ?? flow.title} 已提交项目验收`,
+    "product.completeAcceptance": `${demand?.name ?? flow.title} 项目验收完成`,
+    "product.returnExecution": `${project?.name ?? flow.title} 退回项目进行`,
+    "requester.submitScore": `${demand?.name ?? flow.title} 评分已提交`
   };
-  if (actionId === "product.submitScopeConfirm") {
-    return {
-      ...base,
-      title: `${demand?.name ?? flow.title} 产品评估待确认`,
-      content: compactContent(`${actor.userName} 提交了业务范围和验收标准确认，请运营负责人处理。`, noteText),
-      channel: "企业微信",
-      type: "产品评估待确认",
-      level: "orange",
-      targetRoles: ["opsOwner"],
-      targetUserNames: demand ? ["周宁", demand.requester] : ["周宁"]
-    };
-  }
-  if (actionId === "product.submitDeliveryRequest") {
-    return {
-      ...base,
-      title: `${demand?.name ?? flow.title} 项目申请待受理`,
-      content: compactContent(`${actor.userName} 提交项目申请：${flow.resourceRequest.need}，窗口 ${flow.resourceRequest.window}。`, noteText),
-      channel: "企业微信",
-      type: "项目申请提交",
-      level: "orange",
-      targetRoles: ["pm", "itOwner"],
-      targetUserNames: project ? [project.owner, project.supplierManager] : undefined
-    };
-  }
-  if (actionId === "pm.returnDeliveryRequest") {
-    return {
-      ...base,
-      title: `${demand?.name ?? flow.title} 项目申请退回补充`,
-      content: compactContent(`${actor.userName} 退回项目申请，请产品经理补充产品评估、资源或供应商材料。`, noteText),
-      channel: "企业微信",
-      type: "项目申请退回",
-      level: "orange",
-      targetRoles: ["product"],
-      targetUserNames: [flow.resourceRequest.requester]
-    };
-  }
-  if (actionId === "pm.acceptDeliveryRequest") {
-    return {
-      ...base,
-      title: `${project?.name ?? flow.title} 项目申请已受理`,
-      content: compactContent(`${actor.userName} 已受理项目申请，项目进入立项与资源排期。`, noteText),
-      channel: "站内信",
-      type: "项目申请受理",
-      level: "blue",
-      targetRoles: ["product", "itOwner"],
-      targetUserNames: [flow.resourceRequest.requester]
-    };
-  }
-  if (actionId === "pm.confirmResourceSchedule") {
-    return {
-      ...base,
-      title: `${project?.name ?? flow.title} 资源排期已确认`,
-      content: compactContent(`${actor.userName} 已安排 ${flow.assignments.map((item) => `${item.person} ${item.hours}h`).join("、")}。`, noteText),
-      channel: "站内信",
-      type: "资源排期确认",
-      level: "green",
-      targetRoles: ["product", "developer", "rdOwner"],
-      targetUserNames: [flow.resourceRequest.requester, ...flow.assignments.map((item) => item.person)]
-    };
-  }
-  if (actionId === "product.startAcceptance") {
-    return {
-      ...base,
-      title: `${demand?.name ?? flow.title} 已发起验收`,
-      content: compactContent(`${actor.userName} 邀请运营中心验收，请完成业务确认和评分。`, noteText),
-      channel: "企业微信",
-      type: "验收发起",
-      level: "green",
-      targetRoles: ["requester", "opsOwner"],
-      targetUserNames: demand ? [demand.requester, "周宁"] : ["周宁"]
-    };
-  }
-  if (actionId === "pm.updateRiskResponse") {
-    return {
-      ...base,
-      title: `${project?.name ?? flow.title} 风险应对已更新`,
-      content: compactContent(`${actor.userName} 更新了项目风险应对，请关注预算、供应商和里程碑影响。`, noteText),
-      channel: "站内信",
-      type: "风险应对更新",
-      level: project?.risk === "高" ? "red" : "orange",
-      targetRoles: project?.risk === "高" ? ["executive", "itOwner"] : ["itOwner", "product"]
-    };
-  }
-  if (actionId === "pm.submitArchive") {
-    return {
-      ...base,
-      title: `${project?.name ?? flow.title} 已提交上线归档`,
-      content: compactContent(`${actor.userName} 已完成上线确认，后续进入归档和复盘。`, noteText),
-      channel: "站内信",
-      type: "上线归档",
-      level: "green",
-      targetRoles: ["executive", "product", "opsOwner", "pm", "itOwner"]
-    };
-  }
+  const targetsByAction: Record<FlowActionId, RoleId[]> = {
+    "requester.submitReview": ["product"],
+    "product.returnDemand": ["requester", "businessOwner"],
+    "product.submitSolution": ["requester", "businessOwner"],
+    "requester.abandonDemand": ["product", "pm", "businessOwner"],
+    "requester.submitProjectRequest": ["pm", "product"],
+    "pm.startProject": ["product", "developer", "requester", "businessOwner"],
+    "pm.returnSolution": ["product", "requester", "businessOwner"],
+    "pm.assignDevelopers": ["developer", "product"],
+    "developer.createTask": ["pm"],
+    "developer.updateProgress": ["pm", "product"],
+    "developer.completeTask": ["pm"],
+    "pm.submitAcceptance": ["product"],
+    "product.completeAcceptance": ["requester", "businessOwner"],
+    "product.returnExecution": ["pm", "developer"],
+    "requester.submitScore": ["product", "pm", "businessOwner", "executive"]
+  };
   return {
-    ...base,
-    title: `${flow.title} 已更新`,
-    content: compactContent(`${actor.userName} 执行了「${flowActionMeta[actionId].name}」，当前流程节点已同步更新。`, noteText),
-    channel: "站内信",
-      type: actionId.startsWith("product") ? "需求承接" : "交付阶段推进",
-    level: actionId.startsWith("product") ? "blue" : "cyan",
-    targetRoles: actionId.startsWith("product") ? ["requester", "opsOwner", "pm", "itOwner"] : ["product", "opsOwner", "developer", "rdOwner"]
+    title: titleByAction[actionId],
+    content: compactContent(`${actor.userName} 执行了「${actionName}」，流程节点和详情页操作记录已同步更新。`, noteText),
+    channel: actionId.startsWith("requester") || actionId.startsWith("product") ? "企业微信" : "站内信",
+    type: actionName,
+    level: actionId.includes("return") || actionId.includes("abandon") ? "orange" : actionId.includes("complete") || actionId.includes("Score") ? "green" : "blue",
+    targetRoles: targetsByAction[actionId],
+    targetUserNames: demand ? [demand.requester, flow.resourceRequest.requester, ...flow.assignments.map((item) => item.person)] : flow.assignments.map((item) => item.person),
+    sourceUserName: actor.userName,
+    relatedType: "flow",
+    relatedId: flow.id
   };
 }
 

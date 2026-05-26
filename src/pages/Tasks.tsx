@@ -22,7 +22,8 @@ export function Tasks({
   activeUser,
   presetFilter,
   onStatusChange,
-  onAddWorklog
+  onAddWorklog,
+  onCreateTask
 }: {
   tasks: Task[];
   projects: Project[];
@@ -31,8 +32,15 @@ export function Tasks({
   presetFilter: TaskPresetFilter | null;
   onStatusChange: (id: string, status: TaskStatus) => void;
   onAddWorklog: (id: string, hours: number, note: string) => void;
+  onCreateTask: (projectId: string, parentTaskId: string | undefined, title: string, estimate: number, due: string, note: string) => void;
 }) {
   const [selected, setSelected] = useState<Task | null>(null);
+  const [creatingFrom, setCreatingFrom] = useState<Task | null | "new">(null);
+  const [newTaskProjectId, setNewTaskProjectId] = useState("");
+  const [newTaskTitle, setNewTaskTitle] = useState("拆分开发子任务");
+  const [newTaskEstimate, setNewTaskEstimate] = useState("4");
+  const [newTaskDue, setNewTaskDue] = useState("2026-06-05");
+  const [newTaskNote, setNewTaskNote] = useState("补充任务边界、验收口径和预估工时。");
   const [hours, setHours] = useState("2");
   const [note, setNote] = useState("补充联调和自测记录");
   const [filters, setFilters] = useState({
@@ -45,7 +53,7 @@ export function Tasks({
   });
 
   const current = selected ? tasks.find((task) => task.id === selected.id) ?? selected : null;
-  const isRdOwner = activeRole === "rdOwner";
+  const isRdOwner = activeRole === "developer";
   const currentDeveloper = taskScopeLabel(activeRole, activeUser);
   const visibleTasks = useMemo(
     () => scopeTasks(tasks, projects, activeRole, activeUser),
@@ -108,6 +116,25 @@ export function Tasks({
     due: "all"
   });
   const resetFilters = () => setFilters({ keyword: "", project: allOption, status: allOption, role: allOption, owner: allOption, due: "all" });
+  const taskProjectOptions = useMemo(() => {
+    const projectIds = new Set(visibleTasks.map((task) => task.projectId));
+    return projects.filter((project) => projectIds.has(project.id) || activeRole === "admin" || activeRole === "pm");
+  }, [activeRole, projects, visibleTasks]);
+
+  function openCreateTask(parent: Task | null = null) {
+    setCreatingFrom(parent ?? "new");
+    setNewTaskProjectId(parent?.projectId ?? taskProjectOptions[0]?.id ?? "");
+    setNewTaskTitle(parent ? `${parent.title} - 子任务` : "拆分开发子任务");
+    setNewTaskEstimate("4");
+    setNewTaskDue(parent?.due ?? "2026-06-05");
+    setNewTaskNote(parent ? `从 ${parent.id} 拆分，补充开发边界和验收口径。` : "补充任务边界、验收口径和预估工时。");
+  }
+
+  function submitNewTask() {
+    if (!newTaskProjectId || !newTaskTitle.trim()) return;
+    onCreateTask(newTaskProjectId, typeof creatingFrom === "object" && creatingFrom ? creatingFrom.id : undefined, newTaskTitle.trim(), Number(newTaskEstimate) || 0, newTaskDue, newTaskNote);
+    setCreatingFrom(null);
+  }
 
   useEffect(() => {
     if (!presetFilter) return;
@@ -130,7 +157,10 @@ export function Tasks({
         <div>
           <h1>任务与工时</h1>
         </div>
-        <StatusTag tone="orange">{isRdOwner ? `部门任务 ${visibleTasks.length}` : "本周工时填报率 78%"}</StatusTag>
+        <div className="section-actions">
+          {["admin", "developer"].includes(activeRole) ? <button className="btn" type="button" onClick={() => openCreateTask()}>新增子任务</button> : null}
+          <StatusTag tone="orange">{isRdOwner ? `部门任务 ${visibleTasks.length}` : "本周工时填报率 78%"}</StatusTag>
+        </div>
       </div>
 
       <div className="panel">
@@ -229,6 +259,7 @@ export function Tasks({
               <label className="wide">备注<textarea value={note} onChange={(event) => setNote(event.target.value)} /></label>
             </div>
             <div className="split-actions">
+              {["admin", "developer"].includes(activeRole) ? <button className="btn secondary" onClick={() => openCreateTask(current)}>拆分子任务</button> : null}
               <button className="btn" onClick={() => onAddWorklog(current.id, Number(hours) || 0, note)}>保存工时</button>
             </div>
             <SectionHeader title="填报记录" />
@@ -237,6 +268,24 @@ export function Tasks({
             </ul>
           </>
         ) : null}
+      </Modal>
+      <Modal title={creatingFrom && creatingFrom !== "new" ? `拆分 ${creatingFrom.id}` : "新增子任务"} open={Boolean(creatingFrom)} onClose={() => setCreatingFrom(null)}>
+        <div className="form-grid">
+          <label>
+            所属项目
+            <select value={newTaskProjectId} onChange={(event) => setNewTaskProjectId(event.target.value)}>
+              {taskProjectOptions.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+            </select>
+          </label>
+          <label>预估工时<input value={newTaskEstimate} onChange={(event) => setNewTaskEstimate(event.target.value)} /></label>
+          <label>截止日期<input value={newTaskDue} onChange={(event) => setNewTaskDue(event.target.value)} /></label>
+          <label className="wide">任务标题<input value={newTaskTitle} onChange={(event) => setNewTaskTitle(event.target.value)} /></label>
+          <label className="wide">拆分说明 / 留言<textarea value={newTaskNote} onChange={(event) => setNewTaskNote(event.target.value)} /></label>
+        </div>
+        <div className="split-actions">
+          <button className="btn secondary" onClick={() => setCreatingFrom(null)}>取消</button>
+          <button className="btn" onClick={submitNewTask} disabled={!newTaskProjectId || !newTaskTitle.trim()}>创建子任务</button>
+        </div>
       </Modal>
     </section>
   );
@@ -272,13 +321,6 @@ function scopeTasks(tasks: Task[], projects: Project[], activeRole: RoleId, acti
     const projectIds = new Set(projects.filter((project) => project.owner === activeUser.userName || project.supplierManager === activeUser.userName).map((project) => project.id));
     return tasks.filter((task) => projectIds.has(task.projectId));
   }
-  if (activeRole === "itOwner") {
-    const projectIds = new Set(projects.map((project) => project.id));
-    return tasks.filter((task) => projectIds.has(task.projectId));
-  }
-  if (activeRole === "rdOwner") {
-    return tasks.filter((task) => ["吴承", "姜曼", "韩冰", "陆川", "罗清"].includes(task.owner));
-  }
   if (activeRole === "developer") {
     return tasks.filter((task) => task.owner === activeUser.userName);
   }
@@ -288,7 +330,6 @@ function scopeTasks(tasks: Task[], projects: Project[], activeRole: RoleId, acti
 function taskScopeLabel(activeRole: RoleId, activeUser: RoleOption) {
   if (activeRole === "admin") return "全量任务";
   if (activeRole === "pm") return "本人治理项目";
-  if (activeRole === "itOwner") return "IT部项目任务";
-  if (activeRole === "rdOwner") return "研发部";
+  if (activeRole === "developer") return "本人开发任务";
   return activeUser.userName;
 }

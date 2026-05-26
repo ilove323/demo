@@ -31,13 +31,13 @@ export interface GanttGroup {
 }
 
 const projectPalette: Tone[] = ["blue", "cyan", "green", "violet", "orange", "red"];
-const projectStageOrder = ["待受理", "已立项", "资源排期中", "实施中", "联调测试中", "验收支持中", "已上线", "已归档"];
+const projectStageOrder = ["项目启动", "项目进行", "项目验收", "验收完成"];
 
 export function buildProjectGanttGroups(projects: Project[], tasks: Task[]): GanttGroup[] {
   const taskByProject = groupBy(tasks, (task) => task.projectId);
   const grouped = groupBy(projects, projectMainTeam);
 
-  return ["IT部项目治理", "研发部交付实施", "运营中心验收上线"].map((title, groupIndex) => {
+  return ["IT部项目治理", "IT部交付实施", "业务部门验收上线"].map((title, groupIndex) => {
     const rows = (grouped.get(title) ?? []).map((project, index) => {
       const projectTasks = taskByProject.get(project.id) ?? [];
       const range = projectDateRange(project, projectTasks, index + groupIndex);
@@ -192,14 +192,14 @@ function resourceDateRange(entries: ResourceCalendarEntry[], allocationIndex: nu
 }
 
 function projectMainTeam(project: Project) {
-  if (["待受理", "已立项", "资源排期中"].includes(project.stage)) return "IT部项目治理";
-  if (["实施中", "联调测试中"].includes(project.stage)) return "研发部交付实施";
-  return "运营中心验收上线";
+  if (project.stage === "项目启动") return "IT部项目治理";
+  if (project.stage === "项目进行") return "IT部交付实施";
+  return "业务部门验收上线";
 }
 
 function teamSubtitle(title: string) {
   if (title === "IT部项目治理") return "项目申请、立项、资源排期和供应商治理";
-  if (title === "研发部交付实施") return "内部开发、联调、技术问题处理";
+  if (title === "IT部交付实施") return "内部开发、联调、技术问题处理";
   return "业务验收、上线确认和归档配合";
 }
 

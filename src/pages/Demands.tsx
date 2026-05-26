@@ -48,7 +48,7 @@ export function Demands({
         <div className="filters">
           <input placeholder="搜索需求、团队、处理人" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
           <select value={status} onChange={(event) => setStatus(event.target.value)}>
-            {["全部状态", "待业务确认", "待产品承接", "产品评估中", "待项目受理", "交付中", "待验收", "已完成", "暂停"].map((item) => (
+            {["全部状态", "草稿", "需求评审", "方案确认", "项目启动", "项目进行", "项目验收", "验收完成", "已打回", "已放弃"].map((item) => (
               <option key={item}>{item}</option>
             ))}
           </select>
@@ -150,7 +150,7 @@ export function Demands({
           <label>业务目标<input defaultValue="提高培训记录检索效率，支撑审计检查" /></label>
           <label>优先级<select defaultValue="P1"><option>P0</option><option>P1</option><option>P2</option><option>P3</option></select></label>
           <label>期望上线<input type="date" defaultValue="2026-06-30" /></label>
-          <label className="wide">需求描述<textarea defaultValue="运营中心希望按员工、SOP、培训批次快速查询培训完成情况，并保留审计追踪。" /></label>
+          <label className="wide">需求描述<textarea defaultValue="业务部门希望按员工、SOP、培训批次快速查询培训完成情况，并保留审计追踪。" /></label>
           <label className="wide">附件上传区域<input value="需求说明.docx / 审计检查样例.xlsx" readOnly /></label>
         </div>
         <div className="split-actions">
@@ -178,12 +178,14 @@ function ViewToggle({
 }
 
 function nextDemandAction(demand: Demand) {
-  if (demand.status === "待业务确认") return "补充范围/确认优先级";
-  if (demand.status === "待产品承接") return "产品经理承接";
-  if (demand.status === "产品评估中") return "提交产品评估";
-  if (demand.status === "待项目受理") return "项目经理受理";
-  if (demand.status === "交付中") return "跟踪里程碑";
-  if (demand.status === "待验收") return "业务验收评分";
-  if (demand.status === "已完成") return "查看复盘记录";
+  if (demand.status === "草稿") return "发起需求评审";
+  if (demand.status === "需求评审") return "产品经理评审";
+  if (demand.status === "方案确认") return "需求方确认方案";
+  if (demand.status === "项目启动") return "项目经理启动";
+  if (demand.status === "项目进行") return "跟踪里程碑";
+  if (demand.status === "项目验收") return "产品经理验收";
+  if (demand.status === "验收完成") return "需求方评分";
+  if (demand.status === "已打回") return "补充需求后再提交";
+  if (demand.status === "已放弃") return "查看关闭记录";
   return "关注状态变化";
 }

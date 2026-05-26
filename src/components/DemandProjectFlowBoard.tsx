@@ -1,9 +1,9 @@
-import { PlayCircle, Settings2 } from "lucide-react";
+import { ChevronDown, PlayCircle, Settings2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { DemandProjectFlow, FlowActionId, FlowActionLog, FlowBoardAction, FlowLane, FlowNode, FlowNodeStatus } from "../types";
-import { Drawer, Modal, SectionHeader, StatusTag, toneForStatus } from "./ui";
+import { Modal, SectionHeader, StatusTag, toneForStatus } from "./ui";
 
-const lanes: FlowLane[] = ["运营中心", "产品经理", "项目经理 / IT部", "研发部 / 开发", "外部供应商", "高管关注"];
+const lanes: FlowLane[] = ["需求方", "产品经理", "项目经理", "开发", "管理层"];
 const statusOptions: FlowNodeStatus[] = ["待开始", "进行中", "待确认", "已完成", "风险"];
 
 export function DemandProjectFlowBoard({
@@ -27,8 +27,9 @@ export function DemandProjectFlowBoard({
   const [draft, setDraft] = useState<FlowNode | null>(null);
   const [pendingAction, setPendingAction] = useState<FlowBoardAction | null>(null);
   const [actionNote, setActionNote] = useState("");
+  const [actionsOpen, setActionsOpen] = useState(false);
   const enabledActions = actions.filter((action) => !action.disabled);
-  const groupedActions = groupActions(enabledActions);
+  const groupedActions = groupActions(actions);
 
   useEffect(() => {
     setDraft(editing ? { ...editing } : null);
@@ -69,35 +70,48 @@ export function DemandProjectFlowBoard({
         <div><span>资源状态</span><strong>{flow.resourceRequest.status}</strong></div>
       </div>
 
-      {enabledActions.length > 0 ? (
+      {actions.length > 0 ? (
         <div className="flow-action-panel">
-          <SectionHeader title={actionTitle} />
-          <div className="flow-action-groups">
-            {groupedActions.map((group) => (
-              <div className="flow-action-group" key={group.stage}>
-                <div className="flow-action-stage">{group.stage}</div>
-                <div className="flow-action-grid">
-                  {group.actions.map((action) => (
-                    <button
-                      className="flow-action-button"
-                      key={action.id}
-                      type="button"
-                      onClick={() => {
-                        setPendingAction(action);
-                        setActionNote("");
-                      }}
-                    >
-                      <div>
-                        <strong>{action.label}</strong>
-                        <span>{action.description}</span>
-                      </div>
-                      <span className="action-state">可执行</span>
-                    </button>
-                  ))}
+          <button className="flow-action-toggle" type="button" onClick={() => setActionsOpen((current) => !current)} aria-expanded={actionsOpen}>
+            <span>
+              <strong>{actionTitle}</strong>
+              <small>{enabledActions.length} 个当前阶段可执行 / 共 {actions.length} 个动作</small>
+            </span>
+            <span>
+              {actionsOpen ? "收起" : "展开"}
+              <ChevronDown size={16} />
+            </span>
+          </button>
+          {actionsOpen ? (
+            <div className="flow-action-groups">
+              {groupedActions.map((group) => (
+                <div className="flow-action-group" key={group.stage}>
+                  <div className="flow-action-stage">{group.stage}</div>
+                  <div className="flow-action-grid">
+                    {group.actions.map((action) => (
+                      <button
+                        className={`flow-action-button tone-${action.tone}${action.disabled ? " disabled" : ""}`}
+                        disabled={Boolean(action.disabled)}
+                        key={action.id}
+                        type="button"
+                        onClick={() => {
+                          setPendingAction(action);
+                          setActionNote("");
+                        }}
+                      >
+                        <div>
+                          <strong>{action.label}</strong>
+                          <span>{action.description}</span>
+                          <em>{action.disabled ? action.disabledReason ?? "当前阶段不可执行。" : action.impact?.[0] ?? "点击后同步更新协作泳道。"}</em>
+                        </div>
+                        <span className="action-state">{action.disabled ? "未到阶段" : "可执行"}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -165,7 +179,7 @@ export function DemandProjectFlowBoard({
         </div>
       ) : null}
 
-      <Drawer title="节点设置" open={Boolean(editing && draft)} onClose={() => setEditing(null)}>
+      <Modal title="节点设置" open={Boolean(editing && draft)} onClose={() => setEditing(null)}>
         {draft ? (
           <>
             <div className="form-grid">
@@ -182,7 +196,7 @@ export function DemandProjectFlowBoard({
             </div>
           </>
         ) : null}
-      </Drawer>
+      </Modal>
 
       <Modal title={pendingAction?.label ?? "执行业务动作"} open={Boolean(pendingAction)} onClose={() => setPendingAction(null)}>
         {pendingAction ? (
@@ -193,6 +207,14 @@ export function DemandProjectFlowBoard({
               <div><span>关联流程</span><strong>{flow.title}</strong></div>
               <div><span>当前节点</span><strong>{flow.nodes.find((node) => node.id === flow.currentNodeId)?.name ?? flow.currentNodeId}</strong></div>
             </div>
+            {pendingAction.impact?.length ? (
+              <div className="action-impact-box">
+                <strong>本次执行会同步更新</strong>
+                <ul className="timeline compact">
+                  {pendingAction.impact.map((item) => <li key={item}>{item}</li>)}
+                </ul>
+              </div>
+            ) : null}
             <div className="form-grid">
               <label className="wide">
                 操作备注

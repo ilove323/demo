@@ -5,7 +5,7 @@ import { GanttTimeline } from "../components/GanttTimeline";
 import { buildResourceGanttGroups, buildResourceRiskAlerts } from "../gantt";
 import type { DemandProjectFlow, ResourcePerson } from "../types";
 import { ScheduleCalendar } from "../components/ScheduleCalendar";
-import { Drawer, MetricCard, Modal, ProgressBar, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
+import { MetricCard, Modal, ProgressBar, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
 
 export function Resources({ flows }: { flows: DemandProjectFlow[] }) {
   const [selectedPerson, setSelectedPerson] = useState<ResourcePerson | null>(null);
@@ -168,7 +168,7 @@ export function Resources({ flows }: { flows: DemandProjectFlow[] }) {
         </div>
       </div>
 
-      <Drawer title={selectedPerson ? `${selectedPerson.name} 的占用明细` : ""} open={Boolean(selectedPerson)} onClose={() => setSelectedPerson(null)}>
+      <Modal title={selectedPerson ? `${selectedPerson.name} 的占用明细` : ""} open={Boolean(selectedPerson)} onClose={() => setSelectedPerson(null)} size="wide">
         {selectedPerson ? (
           <>
             <div className="detail-list">
@@ -195,11 +195,11 @@ export function Resources({ flows }: { flows: DemandProjectFlow[] }) {
               ))}
             </div>
             <div className="split-actions">
-              <button className="btn" onClick={() => setCalendarPerson(selectedPerson)}>查看排期日历</button>
+              <button className="btn" onClick={() => { setCalendarPerson(selectedPerson); setSelectedPerson(null); }}>查看排期日历</button>
             </div>
           </>
         ) : null}
-      </Drawer>
+      </Modal>
       <Modal title={calendarPerson ? `${calendarPerson.name} 的排期日历` : ""} open={Boolean(calendarPerson)} onClose={() => setCalendarPerson(null)} size="wide">
         {calendarPerson ? (
           <ScheduleCalendar

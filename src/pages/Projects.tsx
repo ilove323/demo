@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { demands, projectDependencies, projectRules } from "../data";
+import { demands } from "../data";
 import { FilterPanel } from "../components/FilterPanel";
 import { GanttTimeline } from "../components/GanttTimeline";
 import { buildProjectGanttGroups } from "../gantt";
@@ -98,7 +98,7 @@ export function Projects({
   const projectGanttGroups = useMemo(() => buildProjectGanttGroups(filteredProjects, tasks), [filteredProjects, tasks]);
   const visibleDeliveryRequests = useMemo(() => {
     if (activeRole === "pm") return deliveryRequests.filter((request) => request.projectManager === activeUser.userName);
-    if (activeRole === "itOwner" || activeRole === "admin" || activeRole === "executive") return deliveryRequests;
+    if (activeRole === "admin" || activeRole === "executive") return deliveryRequests;
     if (activeRole === "product") return deliveryRequests.filter((request) => request.productOwner === activeUser.userName);
     return [];
   }, [activeRole, activeUser.userName, deliveryRequests]);
@@ -283,7 +283,7 @@ export function Projects({
         ) : null}
       </div>
 
-      {["admin", "pm", "itOwner", "product", "executive"].includes(activeRole) ? (
+      {["admin", "pm", "pm", "product", "executive"].includes(activeRole) ? (
         <div className="panel">
           <SectionHeader eyebrow="PROJECT REQUEST" title="项目申请池" />
           <table className="data-table">
@@ -313,56 +313,6 @@ export function Projects({
           ) : null}
         </div>
       ) : null}
-
-      <div className="grid-2">
-        {filteredProjects.slice(0, 2).map((project) => (
-          <div className="panel" key={project.id}>
-            <SectionHeader eyebrow={project.id} title={project.name} />
-            <div className="stage-strip">
-              {project.stages.map((stage) => (
-                <span className={stage.done ? "done" : ""} key={stage.name}>{stage.name}</span>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid-2">
-        <div className="panel">
-          <SectionHeader eyebrow="RULES" title="实施流程规则与交付物" />
-          <table className="data-table">
-            <thead><tr><th>阶段</th><th>交付物</th><th>负责人</th><th>验收标准</th></tr></thead>
-            <tbody>
-              {projectRules.map((rule) => (
-                <tr key={rule.stage}>
-                  <td><strong>{rule.stage}</strong></td>
-                  <td>{rule.deliverable}</td>
-                  <td>{rule.owner}</td>
-                  <td>{rule.acceptance}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="panel">
-          <SectionHeader eyebrow="RELATION" title="项目关系与依赖" />
-          <table className="data-table">
-            <thead><tr><th>项目</th><th>关系</th><th>目标</th><th>影响</th><th>状态</th></tr></thead>
-            <tbody>
-              {projectDependencies.map((dependency) => (
-                <tr key={`${dependency.project}${dependency.target}`}>
-                  <td><strong>{dependency.project}</strong></td>
-                  <td>{dependency.relation}</td>
-                  <td>{dependency.target}</td>
-                  <td>{dependency.impact}</td>
-                  <td><StatusTag tone={toneForStatus(dependency.status)}>{dependency.status}</StatusTag></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
     </section>
   );
 }
@@ -378,110 +328,50 @@ function getVisibleProjects(projects: Project[], activeRole: RoleId, activeUser:
   return projects;
 }
 
-export function getProjectManagerActions(activeRole: RoleId, flow: DemandProjectFlow): FlowBoardAction[] {
-  if (!["admin", "pm", "itOwner"].includes(activeRole)) return [];
-  const nodeStatus = (id: string) => flow.nodes.find((node) => node.id === id)?.status;
+export function getProjectManagerActions(activeRole: RoleId, flow: DemandProjectFlow, project: Project, projectTasks: Task[] = []): FlowBoardAction[] {
+  if (!["admin", "pm"].includes(activeRole)) return [];
+  const isCurrent = (id: string) => flow.currentNodeId === id;
+  const allTasksDone = projectTasks.length > 0 && projectTasks.every((task) => task.status === "已完成");
   return [
     {
-      id: "pm.acceptDeliveryRequest",
-      label: "受理项目申请",
-      description: "确认产品方案、范围和资源测算可进入项目经理治理。",
-      stage: "项目受理与立项",
-      tone: "orange",
-      disabled: !["待项目经理受理", "待审批"].includes(flow.resourceRequest.status)
-    },
-    {
-      id: "pm.returnDeliveryRequest",
-      label: "退回补充",
-      description: "项目申请材料不足时退回产品经理补充。",
-      stage: "项目受理与立项",
-      tone: "orange",
-      disabled: flow.resourceRequest.status === "已批准"
-    },
-    {
-      id: "pm.createProject",
-      label: "转为新项目",
-      description: "将项目申请正式立项为 IT 项目。",
-      stage: "立项与资源排期",
-      tone: "blue",
-      disabled: flow.resourceRequest.status === "待审批"
-    },
-    {
-      id: "pm.linkProject",
-      label: "关联已有项目",
-      description: "将项目申请合并到已有项目治理范围。",
-      stage: "立项与资源排期",
-      tone: "cyan",
-      disabled: flow.resourceRequest.status === "待审批"
-    },
-    {
-      id: "pm.generateResourcePlan",
-      label: "生成资源计划",
-      description: "根据需求窗口、人员负载和供应商排期生成计划。",
-      stage: "立项与资源排期",
-      tone: "violet",
-      disabled: nodeStatus("iteration") === "待开始"
-    },
-    {
-      id: "pm.confirmResourceSchedule",
-      label: "确认资源排期",
-      description: "确认人员和时间窗口，通知产品经理、开发和研发负责人。",
-      stage: "立项与资源排期",
+      id: "pm.startProject",
+      label: "项目启动",
+      description: "唯一项目经理确认资源合适后启动项目。",
+      stage: "阶段3：项目启动",
       tone: "green",
-      disabled: flow.resourceRequest.status === "已批准"
+      impact: ["泳道推进到阶段4项目进行", "项目状态改为项目进行", "需求方、产品经理、开发收到通知"],
+      disabled: !isCurrent("projectStart"),
+      disabledReason: "只有项目启动阶段可执行。"
     },
     {
-      id: "pm.assignSupplier",
-      label: "指派供应商",
-      description: "确认外部供应商负责人、合同跟进和交付检查点。",
-      stage: "执行治理",
-      tone: "violet",
-      disabled: flow.mode === "内部实现"
+      id: "pm.returnSolution",
+      label: "退回方案确认",
+      description: "资源暂不合适或方案边界不足时，退回需求方和产品经理补充。",
+      stage: "阶段3：项目启动",
+      tone: "orange",
+      impact: ["泳道回到阶段2方案确认", "项目申请状态改为退回方案确认", "操作留言写入记录和通知"],
+      disabled: !isCurrent("projectStart"),
+      disabledReason: "只有项目启动阶段可退回方案确认。"
     },
     {
-      id: "pm.updateBudget",
-      label: "更新预算记录",
-      description: "维护预算使用、付款状态和合同备注。",
-      stage: "执行治理",
-      tone: "orange"
-    },
-    {
-      id: "pm.updateRiskResponse",
-      label: "更新风险应对",
-      description: "补充风险原因、应对措施和治理记录。",
-      stage: "执行治理",
-      tone: "red"
-    },
-    {
-      id: "pm.updateSupplierDelivery",
-      label: "更新供应商交付状态",
-      description: "维护供应商交付进度、风险和下一检查点。",
-      stage: "执行治理",
-      tone: "violet",
-      disabled: flow.mode === "内部实现"
-    },
-    {
-      id: "pm.enterIntegrationTest",
-      label: "进入联调测试",
-      description: "开发或供应商完成实施后，进入联调测试。",
-      stage: "联调测试",
+      id: "pm.assignDevelopers",
+      label: "指派开发",
+      description: "在项目进行阶段指定开发人员和职责。",
+      stage: "阶段4：项目进行",
       tone: "blue",
-      disabled: nodeStatus("resource") !== "已完成"
+      impact: ["泳道保持阶段4项目进行", "开发收到指派通知", "操作留言写入记录和通知"],
+      disabled: !isCurrent("projectExecution"),
+      disabledReason: "只有项目进行阶段可指派开发。"
     },
     {
-      id: "pm.enterAcceptanceSupport",
-      label: "进入验收支持",
-      description: "交付可验收后，通知产品经理组织运营验收。",
-      stage: "验收支持",
-      tone: "cyan"
-    },
-    {
-      id: "pm.submitArchive",
-      label: "提交上线归档",
-      description: "完成上线确认、供应商评价、预算和复盘归档。",
-      stage: "上线归档",
+      id: "pm.submitAcceptance",
+      label: "项目验收",
+      description: "项目内任务全部完成后，提交给产品经理验收。",
+      stage: "阶段4：项目进行",
       tone: "green",
-      disabled: nodeStatus("acceptance") === "待开始"
+      impact: ["泳道推进到阶段5项目验收", "项目状态改为项目验收", "产品经理收到验收通知"],
+      disabled: !isCurrent("projectExecution") || !allTasksDone,
+      disabledReason: !isCurrent("projectExecution") ? "只有项目进行阶段可提交验收。" : "需项目内任务全部完成后才能提交验收。"
     }
   ];
 }
@@ -503,13 +393,10 @@ function formatMoney(value: number) {
 }
 
 function nextProjectAction(project: Project) {
-  if (project.stage === "待受理") return "受理项目申请";
-  if (project.stage === "已立项") return "生成资源计划";
-  if (project.stage === "资源排期中") return "确认排期";
-  if (project.stage === "实施中") return "跟踪任务交付";
-  if (project.stage === "联调测试中") return "处理联调风险";
-  if (project.stage === "验收支持中") return "组织业务验收";
-  if (project.stage === "已上线") return "提交归档";
+  if (project.stage === "项目启动") return "判断资源并启动";
+  if (project.stage === "项目进行") return "跟踪任务交付";
+  if (project.stage === "项目验收") return "等待产品验收";
+  if (project.stage === "验收完成") return "等待需求方评分";
   return "查看复盘";
 }
 

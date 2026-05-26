@@ -2,7 +2,7 @@ import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
-const mobileQuery = "(max-width: 640px)";
+const mobileQuery = "(max-width: 820px)";
 
 export function FilterPanel({
   title = "筛选",

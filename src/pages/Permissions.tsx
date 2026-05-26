@@ -94,7 +94,7 @@ const rowLevelExamples = [
     title: "本人数据",
     scope: "个人",
     tone: "blue" as const,
-    rule: "运营只能查看本人提交或被邀请验收的需求；开发只能查看本人任务、排期和工时。",
+    rule: "业务只能查看本人提交或被邀请验收的需求；开发只能查看本人任务、排期和工时。",
     example: "沈岚只看到自己的需求，吴承只看到自己的任务。"
   },
   {
@@ -102,7 +102,7 @@ const rowLevelExamples = [
     scope: "部门",
     tone: "cyan" as const,
     rule: "部门负责人以原业务角色进入系统，但数据范围扩展到本部门需求、任务、投入和验收结果。",
-    example: "运营中心负责人可调整运营中心全部需求优先级。"
+    example: "业务部门负责人可调整业务部门全部需求优先级。"
   },
   {
     title: "项目池数据",

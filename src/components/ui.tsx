@@ -44,33 +44,6 @@ export function ProgressBar({ value }: { value: number }) {
   );
 }
 
-export function Drawer({
-  title,
-  open,
-  onClose,
-  children
-}: {
-  title: string;
-  open: boolean;
-  onClose: () => void;
-  children: ReactNode;
-}) {
-  if (!open) return null;
-  return (
-    <div className="overlay" role="presentation" onMouseDown={onClose}>
-      <aside className="drawer" role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
-        <div className="drawer-head">
-          <h3>{title}</h3>
-          <button className="icon-button" onClick={onClose} aria-label="关闭">
-            <X size={18} />
-          </button>
-        </div>
-        <div className="drawer-body">{children}</div>
-      </aside>
-    </div>
-  );
-}
-
 export function Modal({
   title,
   open,
@@ -88,7 +61,7 @@ export function Modal({
   return (
     <div className="overlay" role="presentation" onMouseDown={onClose}>
       <section className={size === "wide" ? "modal wide" : "modal"} role="dialog" aria-modal="true" onMouseDown={(event) => event.stopPropagation()}>
-        <div className="drawer-head">
+        <div className="modal-head">
           <h3>{title}</h3>
           <button className="icon-button" onClick={onClose} aria-label="关闭">
             <X size={18} />
@@ -144,9 +117,9 @@ export function EmptyState({ title, body }: { title: string; body: string }) {
 }
 
 export function toneForStatus(status: string): Tone {
-  if (["已完成", "已上线", "已归档", "低", "完成", "已批准", "已受理", "已立项", "已关闭", "启用"].includes(status)) return "green";
-  if (["交付中", "实施中", "联调测试中", "验收支持中", "进行中", "产品评估中", "资源排期中"].includes(status)) return "blue";
-  if (["待业务确认", "待产品承接", "待项目受理", "待受理", "待验收", "待审批", "待确认", "待项目经理受理", "评估中", "测算中", "退回补充", "中"].includes(status)) return "orange";
+  if (["已完成", "验收完成", "低", "完成", "已批准", "已启动", "已关闭", "启用"].includes(status)) return "green";
+  if (["项目进行", "项目验收", "进行中", "需求评审"].includes(status)) return "blue";
+  if (["草稿", "方案确认", "项目启动", "待审批", "待确认", "待项目经理启动", "评估中", "测算中", "退回方案确认", "中"].includes(status)) return "orange";
   if (["暂停", "高", "延期风险", "风险"].includes(status)) return "red";
   return "gray";
 }
