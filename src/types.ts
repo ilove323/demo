@@ -123,11 +123,21 @@ export interface Project {
   risk: RiskLevel;
   riskReason: string;
   riskResponse: string;
+  aiScore: ProjectAiScore;
   stages: { name: ProjectStage; done: boolean }[];
   milestones: { name: string; date: string; status: string }[];
   resources: string[];
   taskIds: string[];
   contributions: ContributionItem[];
+}
+
+export interface ProjectAiScore {
+  businessValue: number;
+  urgency: number;
+  feasibility: number;
+  total: number;
+  recommendation: "推荐立项" | "谨慎推荐" | "暂不推荐";
+  reasons: string[];
 }
 
 export interface ContributionItem {

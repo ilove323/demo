@@ -17,7 +17,7 @@ export function Permissions({ activeRole }: { activeRole: RoleId }) {
       </div>
       <div className="grid-2">
         <div className="panel">
-          <SectionHeader eyebrow="ACCESS PREVIEW" title={`${roleName} 权限预览`} />
+          <SectionHeader title={`${roleName} 权限预览`} />
           <div className="detail-list">
             <div><span>数据范围</span><strong>{preview.dataScope}</strong></div>
           </div>
@@ -27,7 +27,7 @@ export function Permissions({ activeRole }: { activeRole: RoleId }) {
           <ul className="timeline">{preview.actions.map((item) => <li key={item}>{item}</li>)}</ul>
         </div>
         <div className="panel">
-          <SectionHeader eyebrow="ROLES" title="角色说明" />
+          <SectionHeader title="角色说明" />
           <div className="role-card-list">
             {roles.filter((role) => !role.isDepartmentOwner).map((role) => (
               <div className={role.id === activeRole ? "role-card selected" : "role-card"} key={role.id}>
@@ -40,15 +40,30 @@ export function Permissions({ activeRole }: { activeRole: RoleId }) {
       </div>
       <div className="grid-2">
         <div className="panel">
-          <SectionHeader eyebrow="USERS" title="用户、角色与组织身份" />
+          <SectionHeader title="用户、角色与组织身份" />
           <table className="data-table">
             <thead><tr><th>姓名</th><th>部门</th><th>角色</th><th>组织身份</th><th>数据范围</th></tr></thead>
             <tbody>{users.map((user) => <tr key={user.name}><td><strong>{user.name}</strong></td><td>{user.department}</td><td>{user.role}</td><td>{user.organizationTitle ?? "普通成员"}</td><td>{user.scope}</td></tr>)}</tbody>
           </table>
         </div>
       </div>
+      <div className="panel">
+        <SectionHeader title="数据范围与行级权限口径" />
+        <div className="permission-scope-grid">
+          {rowLevelExamples.map((item) => (
+            <article className="scope-card" key={item.title}>
+              <div>
+                <strong>{item.title}</strong>
+                <StatusTag tone={item.tone}>{item.scope}</StatusTag>
+              </div>
+              <p>{item.rule}</p>
+              <span>{item.example}</span>
+            </article>
+          ))}
+        </div>
+      </div>
       <div className="panel permission-grid">
-        <SectionHeader eyebrow="MATRIX" title="权限矩阵" />
+        <SectionHeader title="权限矩阵" />
         <table className="data-table">
           <thead><tr><th>模块</th><th>查看</th><th>新建</th><th>编辑</th><th>审批</th><th>导出</th><th>数据范围</th></tr></thead>
           <tbody>
@@ -73,3 +88,34 @@ export function Permissions({ activeRole }: { activeRole: RoleId }) {
 function mark(value: boolean) {
   return value ? <span className="check">是</span> : <span className="cross">否</span>;
 }
+
+const rowLevelExamples = [
+  {
+    title: "本人数据",
+    scope: "个人",
+    tone: "blue" as const,
+    rule: "运营只能查看本人提交或被邀请验收的需求；开发只能查看本人任务、排期和工时。",
+    example: "沈岚只看到自己的需求，吴承只看到自己的任务。"
+  },
+  {
+    title: "本部门数据",
+    scope: "部门",
+    tone: "cyan" as const,
+    rule: "部门负责人以原业务角色进入系统，但数据范围扩展到本部门需求、任务、投入和验收结果。",
+    example: "运营中心负责人可调整运营中心全部需求优先级。"
+  },
+  {
+    title: "项目池数据",
+    scope: "项目",
+    tone: "violet" as const,
+    rule: "项目经理查看自己负责或被分配治理的 IT 项目，IT负责人查看 IT部项目池和供应商预算。",
+    example: "项目详情页展示关联需求、资源申请、供应商预算和操作记录。"
+  },
+  {
+    title: "全局数据",
+    scope: "全局",
+    tone: "orange" as const,
+    rule: "管理员和高管可查看全局汇总；管理员额外维护用户、角色、部门、通知和集成配置。",
+    example: "高管看项目组合与绩效，管理员看权限矩阵和集成状态。"
+  }
+];

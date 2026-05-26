@@ -513,6 +513,14 @@ export const projects: Project[] = [
     risk: "中",
     riskReason: "主数据冻结窗口和外围接口排期存在依赖",
     riskResponse: "项目经理已设置主数据冻结日和接口联调日历，若 6 月 3 日前未完成则拆分非关键接口二期上线。",
+    aiScore: {
+      businessValue: 92,
+      urgency: 86,
+      feasibility: 78,
+      total: 86,
+      recommendation: "推荐立项",
+      reasons: ["财务供应链一体化对月结效率和合规透明度价值高", "上线窗口与主数据冻结强相关，需重点管控接口排期", "外部顾问成熟但跨系统联调复杂度较高"]
+    },
     stages: projectStageTrack("实施中"),
     milestones: [
       { name: "蓝图评审", date: "2026-05-12", status: "完成" },
@@ -543,6 +551,14 @@ export const projects: Project[] = [
     risk: "低",
     riskReason: "供应商报价和移动端合规留痕方案仍在评审",
     riskResponse: "产品经理组织供应商评分，项目经理同步准备商务评审和合同风险清单。",
+    aiScore: {
+      businessValue: 88,
+      urgency: 82,
+      feasibility: 74,
+      total: 82,
+      recommendation: "推荐立项",
+      reasons: ["拜访合规留痕直接支撑审计要求和销售行为规范", "移动 H5 场景明确但供应商报价仍需冻结", "实现依赖 CRM 供应商和内部接口协作，需先完成方案评审"]
+    },
     stages: projectStageTrack("待受理"),
     milestones: [
       { name: "合规规则确认", date: "2026-05-30", status: "进行中" },
@@ -573,6 +589,14 @@ export const projects: Project[] = [
     risk: "低",
     riskReason: "待运营中心完成验收评分",
     riskResponse: "产品经理已发起运营中心验收邀请，项目经理准备验证包归档清单。",
+    aiScore: {
+      businessValue: 90,
+      urgency: 80,
+      feasibility: 88,
+      total: 87,
+      recommendation: "推荐立项",
+      reasons: ["GxP 文档和审计追踪是合规基础能力", "验证咨询与内部开发分工清晰", "项目已进入验收支持，交付确定性高"]
+    },
     stages: projectStageTrack("验收支持中"),
     milestones: [
       { name: "验证测试通过", date: "2026-05-20", status: "完成" },
@@ -602,6 +626,14 @@ export const projects: Project[] = [
     risk: "中",
     riskReason: "指标口径和部门数据权限需要运营中心负责人最终确认",
     riskResponse: "产品经理将口径冻结会提前到 5 月 31 日，开发先完成权限模型和审计日志底座。",
+    aiScore: {
+      businessValue: 84,
+      urgency: 76,
+      feasibility: 86,
+      total: 82,
+      recommendation: "推荐立项",
+      reasons: ["自助报表可降低跨部门取数沟通成本", "纯内部实现不依赖外采合同，成本可控", "指标口径和行级权限需要先冻结，避免后期返工"]
+    },
     stages: projectStageTrack("实施中"),
     milestones: [
       { name: "指标口径冻结", date: "2026-05-31", status: "进行中" },
@@ -631,6 +663,14 @@ export const projects: Project[] = [
     risk: "低",
     riskReason: "已完成上线复盘",
     riskResponse: "进入运维观察期，LIMS 供应商保留 2 周问题响应窗口。",
+    aiScore: {
+      businessValue: 86,
+      urgency: 72,
+      feasibility: 90,
+      total: 84,
+      recommendation: "推荐立项",
+      reasons: ["实验室样本流程升级对研发效率和数据合规有明确价值", "供应商能力成熟，已完成上线复盘", "后续主要风险在运维观察和问题响应窗口"]
+    },
     stages: projectStageTrack("已归档"),
     milestones: [
       { name: "供应商交付", date: "2026-04-28", status: "完成" },
@@ -660,6 +700,14 @@ export const projects: Project[] = [
     risk: "高",
     riskReason: "GPU 交付批次和机房电力扩容存在不确定性",
     riskResponse: "先上线 12 卡试运行环境，完整集群等待第二批设备到货；高管周会确认扩容预算。",
+    aiScore: {
+      businessValue: 94,
+      urgency: 88,
+      feasibility: 68,
+      total: 84,
+      recommendation: "谨慎推荐",
+      reasons: ["AI 建模与影像分析算力底座战略价值高", "GPU 到货和机房电力扩容存在硬件交付风险", "建议分阶段上线试运行环境，预算和供应链风险需高管持续关注"]
+    },
     stages: projectStageTrack("联调测试中"),
     milestones: [
       { name: "GPU 节点上架", date: "2026-05-18", status: "完成" },
@@ -689,6 +737,14 @@ export const projects: Project[] = [
     risk: "低",
     riskReason: "现场踏勘尚未完成，设备清单和布线窗口待确认",
     riskResponse: "项目经理安排供应商踏勘并锁定培训空档期，避免影响季度合规培训。",
+    aiScore: {
+      businessValue: 70,
+      urgency: 66,
+      feasibility: 82,
+      total: 72,
+      recommendation: "谨慎推荐",
+      reasons: ["培训体验提升明确，但业务收益不如核心系统改造直接", "外部集成商可完整交付，内部开发占用低", "现场踏勘和施工窗口确认后再锁定最终设备清单"]
+    },
     stages: projectStageTrack("待受理"),
     milestones: [
       { name: "现场踏勘", date: "2026-05-29", status: "预约中" },

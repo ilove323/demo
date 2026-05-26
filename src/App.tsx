@@ -3,10 +3,12 @@ import { AppLayout } from "./components/Layout";
 import { deliveryRequests as initialDeliveryRequests, demands as initialDemands, demandProjectFlows as initialDemandProjectFlows, initialNotifications, initialTasks, navItems, projects as initialProjects, roleAccessPreviews, roles } from "./data";
 import { Dashboard } from "./pages/Dashboard";
 import { Demands } from "./pages/Demands";
+import { DemandDetail } from "./pages/DemandDetail";
 import { Integrations } from "./pages/Integrations";
 import { Notifications } from "./pages/Notifications";
 import { Permissions } from "./pages/Permissions";
 import { Profile } from "./pages/Profile";
+import { ProjectDetail } from "./pages/ProjectDetail";
 import { Projects } from "./pages/Projects";
 import { Reports } from "./pages/Reports";
 import { Resources } from "./pages/Resources";
@@ -29,6 +31,7 @@ export default function App() {
   const [taskPresetFilter, setTaskPresetFilter] = useState<TaskPresetFilter | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [profileTab, setProfileTab] = useState<ProfileTab>("personal");
+  const [detailView, setDetailView] = useState<{ type: "demand" | "project"; id: string; from: PageId } | null>(null);
   const role = roles.find((item) => item.id === activeRole)!;
   const roleNotifications = useMemo(
     () =>
@@ -58,8 +61,38 @@ export default function App() {
   useEffect(() => {
     if (activePage !== "profile" && visibleNavItems.length > 0 && !visiblePageIds.includes(activePage)) {
       setActivePage(visibleNavItems[0].id);
+      setDetailView(null);
     }
   }, [activePage, visibleNavItems, visiblePageIds]);
+
+  const detailDemand = detailView?.type === "demand" ? demands.find((item) => item.id === detailView.id) : undefined;
+  const detailProject = detailView?.type === "project" ? projects.find((item) => item.id === detailView.id) : undefined;
+
+  useEffect(() => {
+    if (!detailView) return;
+    if (detailView.type === "demand" && !detailDemand) setDetailView(null);
+    if (detailView.type === "project" && !detailProject) setDetailView(null);
+  }, [detailDemand, detailProject, detailView]);
+
+  function changePage(page: PageId) {
+    setDetailView(null);
+    setActivePage(page);
+  }
+
+  function openDemandDetail(id: string) {
+    setDetailView({ type: "demand", id, from: activePage });
+  }
+
+  function openProjectDetail(id: string) {
+    setDetailView({ type: "project", id, from: activePage });
+  }
+
+  function closeDetail() {
+    setDetailView(null);
+    if (detailView?.from) {
+      setActivePage(detailView.from);
+    }
+  }
 
   function updateDemandPriority(id: string, priority: Priority) {
     setDemands((items) =>
@@ -274,17 +307,20 @@ export default function App() {
   }
 
   function openProfile(tab: ProfileTab) {
+    setDetailView(null);
     setProfileTab(tab);
     setActivePage("profile");
   }
 
   function openNotificationSettings() {
     if (activeRole === "admin") {
+      setDetailView(null);
       setActivePage("notificationSettings");
     }
   }
 
   function openTaskFilter(filter: Omit<TaskPresetFilter, "nonce">) {
+    setDetailView(null);
     setTaskPresetFilter({ ...filter, nonce: Date.now() });
     setActivePage("tasks");
   }
@@ -297,22 +333,56 @@ export default function App() {
       activeRole={activeRole}
       unreadCount={unreadCount}
       theme={theme}
-      onPageChange={setActivePage}
-      onRoleChange={setActiveRole}
+      onPageChange={changePage}
+      onRoleChange={(nextRole) => {
+        setDetailView(null);
+        setActiveRole(nextRole);
+      }}
       onThemeChange={setTheme}
       onOpenProfile={() => openProfile("personal")}
       onOpenNotifications={() => openProfile("notifications")}
     >
+      {detailView?.type === "demand" && detailDemand ? (
+        <DemandDetail
+          demand={detailDemand}
+          flow={demandProjectFlows.find((flow) => flow.demandId === detailDemand.id)}
+          activeUser={role}
+          canAdjustPriority={activeRole === "admin" || activeRole === "product" || Boolean(role.isDepartmentOwner)}
+          onBack={closeDetail}
+          onPriorityChange={updateDemandPriority}
+          onSubmitReview={submitAcceptanceReview}
+          onAssignWork={assignWork}
+        />
+      ) : null}
+      {detailView?.type === "project" && detailProject ? (
+        <ProjectDetail
+          project={detailProject}
+          demand={demands.find((demand) => demand.id === detailProject.demandId)}
+          projects={projects}
+          tasks={tasks}
+          flow={demandProjectFlows.find((flow) => flow.projectId === detailProject.id || flow.demandId === detailProject.demandId)}
+          deliveryRequest={deliveryRequests.find((request) => request.projectId === detailProject.id || request.demandId === detailProject.demandId)}
+          activeRole={activeRole}
+          activeUser={role}
+          flowActionLogs={flowActionLogs}
+          projectActionLogs={projectActionLogs}
+          onBack={closeDetail}
+          onApplyFlowAction={applyFlowAction}
+          onAssignWork={assignWork}
+          onUpdateProjectRecord={updateProjectRecord}
+          onAdvanceProjectStage={advanceProjectStage}
+          onOpenTaskFilter={openTaskFilter}
+        />
+      ) : null}
+      {detailView ? null : (
+        <>
       {activePage === "dashboard" ? <Dashboard role={activeRole} /> : null}
       {activePage === "demands" ? (
         <Demands
           demands={visibleDemands}
-          flows={demandProjectFlows}
-          activeUser={role}
           canAdjustPriority={activeRole === "admin" || activeRole === "product" || Boolean(role.isDepartmentOwner)}
           onPriorityChange={updateDemandPriority}
-          onSubmitReview={submitAcceptanceReview}
-          onAssignWork={assignWork}
+          onOpenDetail={openDemandDetail}
         />
       ) : null}
       {activePage === "workflow" ? (
@@ -344,6 +414,7 @@ export default function App() {
           onUpdateProjectRecord={updateProjectRecord}
           onAdvanceProjectStage={advanceProjectStage}
           onOpenTaskFilter={openTaskFilter}
+          onOpenDetail={openProjectDetail}
         />
       ) : null}
       {activePage === "tasks" ? <Tasks tasks={tasks} projects={projects} activeRole={activeRole} activeUser={role} presetFilter={taskPresetFilter} onStatusChange={changeTaskStatus} onAddWorklog={addWorklog} /> : null}
@@ -376,6 +447,8 @@ export default function App() {
           onOpenNotificationSettings={activeRole === "admin" ? openNotificationSettings : undefined}
         />
       ) : null}
+        </>
+      )}
     </AppLayout>
   );
 }

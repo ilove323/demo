@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-import { demands, projectDependencies, projectRules, users } from "../data";
-import { DemandProjectFlowBoard } from "../components/DemandProjectFlowBoard";
+import { useMemo, useState } from "react";
+import { demands, projectDependencies, projectRules } from "../data";
 import { GanttTimeline } from "../components/GanttTimeline";
 import { buildProjectGanttGroups } from "../gantt";
-import type { DeliveryRequest, DemandProjectFlow, FlowActionId, FlowActionLog, FlowBoardAction, Project, ProjectActionLog, ProjectStage, RoleId, RoleOption, Task, TaskPresetFilter } from "../types";
-import { Drawer, ProgressBar, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
+import type { DeliveryRequest, DemandProjectFlow, FlowActionId, FlowActionLog, FlowBoardAction, Project, ProjectActionLog, ProjectStage, RoleId, RoleOption, Task, TaskPresetFilter, Tone } from "../types";
+import { ProgressBar, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
 
 const allOption = "全部";
 
@@ -21,7 +20,8 @@ export function Projects({
   onAssignWork,
   onUpdateProjectRecord,
   onAdvanceProjectStage,
-  onOpenTaskFilter
+  onOpenTaskFilter,
+  onOpenDetail
 }: {
   projects: Project[];
   tasks: Task[];
@@ -36,12 +36,9 @@ export function Projects({
   onUpdateProjectRecord: (projectId: string, patch: Partial<Project>, summary: string) => void;
   onAdvanceProjectStage: (projectId: string, nextStage?: ProjectStage) => void;
   onOpenTaskFilter: (filter: Omit<TaskPresetFilter, "nonce">) => void;
+  onOpenDetail: (projectId: string) => void;
 }) {
-  const [selected, setSelected] = useState<Project | null>(null);
-  const [riskDraft, setRiskDraft] = useState("");
-  const [recordDraft, setRecordDraft] = useState("");
   const [viewMode, setViewMode] = useState<"list" | "card" | "gantt">("card");
-  const [projectAssignee, setProjectAssignee] = useState("");
   const [filters, setFilters] = useState({
     keyword: "",
     projectType: allOption,
@@ -54,16 +51,9 @@ export function Projects({
   const visibleProjects = useMemo(() => getVisibleProjects(projects, activeRole, activeUser), [activeRole, activeUser, projects]);
   const ownerOptions = useMemo(() => unique(visibleProjects.map((project) => project.owner)), [visibleProjects]);
   const supplierManagerOptions = useMemo(() => unique(visibleProjects.map((project) => project.supplierManager)), [visibleProjects]);
-  const projectManagerOptions = useMemo(
-    () =>
-      unique([
-        ...users.filter((user) => user.departmentId === "it" && user.roleId === "pm").map((user) => user.name),
-        ...projects.map((project) => project.owner),
-        ...projects.map((project) => project.supplierManager)
-      ]),
-    [projects]
-  );
   const taskById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
+  const projectById = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
+  const projectByDemandId = useMemo(() => new Map(projects.map((project) => [project.demandId, project])), [projects]);
   const filteredProjects = useMemo(
     () =>
       visibleProjects.filter((project) => {
@@ -82,6 +72,12 @@ export function Projects({
             project.risk,
             project.riskReason,
             project.riskResponse,
+            project.aiScore.recommendation,
+            String(project.aiScore.total),
+            String(project.aiScore.businessValue),
+            String(project.aiScore.urgency),
+            String(project.aiScore.feasibility),
+            ...project.aiScore.reasons,
             ...project.resources,
             ...project.taskIds.map((taskId) => taskById.get(taskId)?.title ?? taskId),
             ...project.contributions.flatMap((item) => [item.party, item.type, item.responsibility, item.status])
@@ -98,13 +94,6 @@ export function Projects({
       }),
     [filters, taskById, visibleProjects]
   );
-  const selectedFlow = selected ? flows.find((flow) => flow.projectId === selected.id || flow.demandId === selected.demandId) : undefined;
-  const selectedFlowLogs = selectedFlow ? flowActionLogs.filter((log) => log.flowId === selectedFlow.id) : [];
-  const selectedProjectLogs = selected ? projectActionLogs.filter((log) => log.projectId === selected.id) : [];
-  const selectedProjectTasks = selected ? selected.taskIds.map((taskId) => taskById.get(taskId)).filter((task): task is Task => Boolean(task)) : [];
-  const missingTaskIds = selected ? selected.taskIds.filter((taskId) => !taskById.has(taskId)) : [];
-  const canOpenTasks = ["admin", "pm", "itOwner", "rdOwner", "developer"].includes(activeRole);
-  const managerActions = selectedFlow ? getProjectManagerActions(activeRole, selectedFlow) : [];
   const projectGanttGroups = useMemo(() => buildProjectGanttGroups(filteredProjects, tasks), [filteredProjects, tasks]);
   const visibleDeliveryRequests = useMemo(() => {
     if (activeRole === "pm") return deliveryRequests.filter((request) => request.projectManager === activeUser.userName);
@@ -116,13 +105,32 @@ export function Projects({
     () =>
       visibleDeliveryRequests.filter((request) => {
         const keyword = filters.keyword.trim().toLowerCase();
+        const relatedProject = request.projectId ? projectById.get(request.projectId) : projectByDemandId.get(request.demandId);
         return (
-          (!keyword || [request.id, request.title, request.productOwner, request.projectManager, request.resourceNeed, request.supplierNeed, request.status].some((value) => value.toLowerCase().includes(keyword))) &&
+          (!keyword ||
+            [
+              request.id,
+              request.title,
+              request.productOwner,
+              request.projectManager,
+              request.resourceNeed,
+              request.supplierNeed,
+              request.status,
+              relatedProject?.id,
+              relatedProject?.name,
+              relatedProject?.aiScore.recommendation,
+              relatedProject ? String(relatedProject.aiScore.total) : undefined,
+              relatedProject ? String(relatedProject.aiScore.businessValue) : undefined,
+              relatedProject ? String(relatedProject.aiScore.urgency) : undefined,
+              relatedProject ? String(relatedProject.aiScore.feasibility) : undefined,
+              ...(relatedProject?.aiScore.reasons ?? [])
+            ].some((value) => (value ?? "").toLowerCase().includes(keyword))) &&
           matchesSelect(request.requestedMode, filters.implementation)
         );
       }),
-    [filters.implementation, filters.keyword, visibleDeliveryRequests]
+    [filters.implementation, filters.keyword, projectByDemandId, projectById, visibleDeliveryRequests]
   );
+  const getRelatedProject = (request: DeliveryRequest) => (request.projectId ? projectById.get(request.projectId) : projectByDemandId.get(request.demandId));
   const resetFilters = () =>
     setFilters({
       keyword: "",
@@ -133,26 +141,6 @@ export function Projects({
       owner: allOption,
       supplierManager: allOption
     });
-
-  useEffect(() => {
-    if (!selected) return;
-    const updated = visibleProjects.find((project) => project.id === selected.id);
-    if (updated) {
-      setSelected(updated);
-      return;
-    }
-    setSelected(null);
-  }, [selected, visibleProjects]);
-
-  useEffect(() => {
-    setRiskDraft(selected?.riskResponse ?? "");
-    setRecordDraft(selected?.riskReason ?? "");
-  }, [selected]);
-
-  useEffect(() => {
-    if (!selected) return;
-    setProjectAssignee(projectManagerOptions.includes(selected.owner) ? selected.owner : projectManagerOptions[0] ?? "");
-  }, [projectManagerOptions, selected]);
 
   return (
     <section className="page">
@@ -206,7 +194,7 @@ export function Projects({
             groups={projectGanttGroups}
             onBarClick={(bar) => {
               const project = filteredProjects.find((item) => bar.id.startsWith(item.id));
-              if (project) setSelected(project);
+              if (project) onOpenDetail(project.id);
             }}
           />
         ) : viewMode === "list" ? (
@@ -218,6 +206,7 @@ export function Projects({
                 <th>项目类型</th>
                 <th>协作模式</th>
                 <th>阶段</th>
+                <th>AI 立项</th>
                 <th>进度</th>
                 <th>预算</th>
                 <th>风险</th>
@@ -225,7 +214,7 @@ export function Projects({
             </thead>
             <tbody>
               {filteredProjects.map((project) => (
-                <tr className="clickable" key={project.id} onClick={() => setSelected(project)}>
+                <tr className="clickable" key={project.id} onClick={() => onOpenDetail(project.id)}>
                   <td>
                     <strong>{project.name}</strong>
                     <div className="muted-text">{project.id} · 关联 {project.demandId}</div>
@@ -234,6 +223,7 @@ export function Projects({
                   <td><StatusTag tone={toneForProjectType(project.projectType)}>{project.projectType}</StatusTag></td>
                   <td><StatusTag tone={toneForImplementation(project.implementation)}>{project.implementation}</StatusTag></td>
                   <td><StatusTag tone={toneForStatus(project.stage)}>{project.stage}</StatusTag></td>
+                  <td><AiScoreBadge project={project} compact /></td>
                   <td>
                     <div className="progress-cell">
                       <ProgressBar value={project.progress} />
@@ -249,13 +239,12 @@ export function Projects({
         ) : (
           <div className="entity-card-grid">
             {filteredProjects.map((project) => (
-              <button className="entity-card project-card" key={project.id} onClick={() => setSelected(project)}>
+              <button className="entity-card project-card compact-entity-card" key={project.id} onClick={() => onOpenDetail(project.id)}>
                 <div className="entity-card-head">
                   <span>{project.id} · 关联 {project.demandId}</span>
                   <StatusTag tone={toneForStatus(project.risk)}>{project.risk}</StatusTag>
                 </div>
                 <strong>{project.name}</strong>
-                <p>{project.riskResponse}</p>
                 <div className="card-meta">
                   <StatusTag tone={toneForProjectType(project.projectType)}>{project.projectType}</StatusTag>
                   <StatusTag tone={toneForImplementation(project.implementation)}>{project.implementation}</StatusTag>
@@ -263,11 +252,10 @@ export function Projects({
                 </div>
                 <div className="compact-grid">
                   <span>负责人：{project.owner}</span>
-                  <span>供应商经理：{project.supplierManager}</span>
                   <span>预算：{formatMoney(project.usedBudget)} / {formatMoney(project.budget)}</span>
-                  <span>内部：{project.personDays} 人天</span>
-                  <span>分工：{project.contributions.length} 方协作</span>
+                  <span>下一步：{nextProjectAction(project)}</span>
                 </div>
+                <AiScoreBadge project={project} />
                 <div className="progress-cell">
                   <ProgressBar value={project.progress} />
                   <span>{project.progress}%</span>
@@ -288,18 +276,22 @@ export function Projects({
         <div className="panel">
           <SectionHeader eyebrow="PROJECT REQUEST" title="项目申请池" />
           <table className="data-table">
-            <thead><tr><th>项目申请</th><th>产品经理</th><th>项目经理</th><th>实现方式</th><th>状态</th><th>资源/供应商</th></tr></thead>
+            <thead><tr><th>项目申请</th><th>产品经理</th><th>项目经理</th><th>实现方式</th><th>状态</th><th>AI 立项建议</th><th>资源/供应商</th></tr></thead>
             <tbody>
-              {filteredDeliveryRequests.map((request) => (
-                <tr key={request.id}>
-                  <td><strong>{request.title}</strong><div className="muted-text">{request.id} · 关联 {request.demandId}</div></td>
-                  <td>{request.productOwner}</td>
-                  <td>{request.projectManager}</td>
-                  <td><StatusTag tone={toneForImplementation(request.requestedMode)}>{request.requestedMode}</StatusTag></td>
-                  <td><StatusTag tone={toneForStatus(request.status)}>{request.status}</StatusTag></td>
-                  <td>{request.resourceNeed}<div className="muted-text">{request.supplierNeed}</div></td>
-                </tr>
-              ))}
+              {filteredDeliveryRequests.map((request) => {
+                const relatedProject = getRelatedProject(request);
+                return (
+                  <tr className={relatedProject ? "clickable" : ""} key={request.id} onClick={() => { if (relatedProject) onOpenDetail(relatedProject.id); }}>
+                    <td><strong>{request.title}</strong><div className="muted-text">{request.id} · 关联 {request.demandId}</div></td>
+                    <td>{request.productOwner}</td>
+                    <td>{request.projectManager}</td>
+                    <td><StatusTag tone={toneForImplementation(request.requestedMode)}>{request.requestedMode}</StatusTag></td>
+                    <td><StatusTag tone={toneForStatus(request.status)}>{request.status}</StatusTag></td>
+                    <td><AiScoreBadge project={relatedProject} compact /></td>
+                    <td>{request.resourceNeed}<div className="muted-text">{request.supplierNeed}</div></td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           {filteredDeliveryRequests.length === 0 ? (
@@ -360,164 +352,6 @@ export function Projects({
         </div>
       </div>
 
-      <Drawer title={selected?.name ?? ""} open={Boolean(selected)} onClose={() => setSelected(null)}>
-        {selected ? (
-          <>
-            <div className="detail-list">
-              <div><span>项目编号</span><strong>{selected.id}</strong></div>
-              <div><span>负责人</span><strong>{selected.owner}</strong></div>
-              <div><span>项目类型</span><strong>{selected.projectType}</strong></div>
-              <div><span>供应商管理</span><strong>{selected.supplierManager}</strong></div>
-              <div><span>当前阶段</span><strong>{selected.stage}</strong></div>
-              <div><span>预算使用</span><strong>{formatMoney(selected.usedBudget)} / {formatMoney(selected.budget)}</strong></div>
-              <div><span>内部人天</span><strong>{selected.personDays} 人天</strong></div>
-              <div><span>风险原因</span><strong>{selected.riskReason}</strong></div>
-              <div><span>应对措施</span><strong>{selected.riskResponse}</strong></div>
-            </div>
-            <SectionHeader title="项目阶段" />
-            <div className="stage-strip">
-              {selected.stages.map((stage) => <span className={stage.done ? "done" : ""} key={stage.name}>{stage.name}</span>)}
-            </div>
-            {selectedFlow ? (
-              <>
-                <SectionHeader title="协作链路 / 交接记录" />
-                <DemandProjectFlowBoard
-                  flow={selectedFlow}
-                  actions={managerActions}
-                  actionTitle="项目经理业务动作"
-                  logs={selectedFlowLogs}
-                  onApplyAction={onApplyFlowAction}
-                />
-              </>
-            ) : null}
-            {activeRole === "itOwner" ? (
-              <>
-                <SectionHeader title="项目分配" />
-                <div className="assignment-strip">
-                  <div>
-                    <strong>分配项目负责人</strong>
-                    <span>{selected.name} · 当前负责人：{selected.owner}</span>
-                  </div>
-                  <div className="assignment-controls">
-                    <select className="inline-select" value={projectAssignee} onChange={(event) => setProjectAssignee(event.target.value)}>
-                      {projectManagerOptions.map((name) => <option key={name} value={name}>{name}</option>)}
-                    </select>
-                    <button
-                      className="btn"
-                      type="button"
-                      disabled={!projectAssignee || projectAssignee === selected.owner}
-                      onClick={() => onAssignWork(projectAssignee, "project", selected.id, `${selected.name} 项目治理和供应商交付`)}
-                    >
-                      分配给{projectAssignee || "项目经理"}
-                    </button>
-                  </div>
-                </div>
-              </>
-            ) : null}
-            {["admin", "pm", "itOwner"].includes(activeRole) ? (
-              <>
-                <SectionHeader title="项目经理业务动作" />
-                <div className="project-command-grid">
-                  <button className="btn" type="button" onClick={() => onAdvanceProjectStage(selected.id)}>
-                    推进交付阶段
-                  </button>
-                  <button className="btn secondary" type="button" onClick={() => onUpdateProjectRecord(selected.id, { riskResponse: `${selected.riskResponse} 已追加每日例会和供应商问题清单。` }, "追加每日例会和供应商问题清单")}>
-                    更新风险应对
-                  </button>
-                  <button className="btn secondary" type="button" onClick={() => onApplyFlowAction(selectedFlow?.id ?? "", "pm.submitArchive")} disabled={!selectedFlow}>
-                    提交上线归档
-                  </button>
-                </div>
-                <SectionHeader title="项目记录编辑" />
-                <div className="form-grid project-record-form">
-                  <label className="wide">风险原因<textarea value={recordDraft} onChange={(event) => setRecordDraft(event.target.value)} /></label>
-                  <label className="wide">应对措施<textarea value={riskDraft} onChange={(event) => setRiskDraft(event.target.value)} /></label>
-                </div>
-                <div className="split-actions">
-                  <button className="btn secondary" type="button" onClick={() => { setRecordDraft(selected.riskReason); setRiskDraft(selected.riskResponse); }}>
-                    重置
-                  </button>
-                  <button className="btn" type="button" onClick={() => onUpdateProjectRecord(selected.id, { riskReason: recordDraft, riskResponse: riskDraft }, "更新风险原因和应对措施")}>
-                    保存项目记录
-                  </button>
-                </div>
-              </>
-            ) : null}
-            {selectedProjectLogs.length > 0 ? (
-              <>
-                <SectionHeader title="项目操作记录" />
-                <ul className="timeline compact">
-                  {selectedProjectLogs.map((log) => <li key={log.id}>{log.time} · {log.actor} · {log.actionName} · {log.summary}</li>)}
-                </ul>
-              </>
-            ) : null}
-            <SectionHeader title="里程碑计划" />
-            <ul className="timeline">
-              {selected.milestones.map((item) => (
-                <li key={`${item.name}${item.date}`}>{item.date} · {item.name} · {item.status}</li>
-              ))}
-            </ul>
-            <SectionHeader title="资源分配" />
-            <ul className="pill-list">
-              {selected.resources.map((item) => <li key={item}>{item}</li>)}
-            </ul>
-            <SectionHeader title="合作实现分工" />
-            <div className="contribution-list">
-              {selected.contributions.map((item) => (
-                <article className="contribution-card" key={`${item.party}${item.responsibility}`}>
-                  <div>
-                    <strong>{item.party}</strong>
-                    <StatusTag tone={item.type === "内部IT" ? "cyan" : item.type === "外部供应商" ? "violet" : "green"}>{item.type}</StatusTag>
-                  </div>
-                  <p>{item.responsibility}</p>
-                  <div className="compact-grid">
-                    <span>投入：{item.effort}</span>
-                    <span>成本：{item.cost}</span>
-                    <span>状态：{item.status}</span>
-                  </div>
-                </article>
-              ))}
-            </div>
-            <SectionHeader title="关联任务" />
-            <div className="linked-task-list">
-              {selectedProjectTasks.map((task) => (
-                <article className="linked-task-card" key={task.id}>
-                  <div>
-                    <strong>{task.title}</strong>
-                    <StatusTag tone={toneForStatus(task.status)}>{task.status}</StatusTag>
-                  </div>
-                  <div className="compact-grid">
-                    <span>编号：{task.id}</span>
-                    <span>负责人：{task.owner}</span>
-                    <span>角色：{task.role}</span>
-                    <span>截止：{task.due}</span>
-                    <span>工时：{task.actual}/{task.estimate}h</span>
-                    <span>项目：{task.project}</span>
-                  </div>
-                  {canOpenTasks ? (
-                    <button
-                      className="btn secondary"
-                      type="button"
-                      onClick={() => {
-                        setSelected(null);
-                        onOpenTaskFilter({ projectId: selected.id, projectName: selected.name, taskId: task.id, keyword: task.id });
-                      }}
-                    >
-                      打开任务与工时
-                    </button>
-                  ) : null}
-                </article>
-              ))}
-            </div>
-            {missingTaskIds.length > 0 ? (
-              <div className="empty-state table-empty">
-                <strong>关联任务数据异常</strong>
-                <span>以下任务 ID 未在任务列表中找到：{missingTaskIds.join(" / ")}</span>
-              </div>
-            ) : null}
-          </>
-        ) : null}
-      </Drawer>
     </section>
   );
 }
@@ -533,7 +367,7 @@ function getVisibleProjects(projects: Project[], activeRole: RoleId, activeUser:
   return projects;
 }
 
-function getProjectManagerActions(activeRole: RoleId, flow: DemandProjectFlow): FlowBoardAction[] {
+export function getProjectManagerActions(activeRole: RoleId, flow: DemandProjectFlow): FlowBoardAction[] {
   if (!["admin", "pm", "itOwner"].includes(activeRole)) return [];
   const nodeStatus = (id: string) => flow.nodes.find((node) => node.id === id)?.status;
   return [
@@ -651,6 +485,57 @@ function matchesSelect(value: string, selected: string) {
 
 function formatMoney(value: number) {
   return `${Math.round(value / 10000)}万`;
+}
+
+function nextProjectAction(project: Project) {
+  if (project.stage === "待受理") return "受理项目申请";
+  if (project.stage === "已立项") return "生成资源计划";
+  if (project.stage === "资源排期中") return "确认排期";
+  if (project.stage === "实施中") return "跟踪任务交付";
+  if (project.stage === "联调测试中") return "处理联调风险";
+  if (project.stage === "验收支持中") return "组织业务验收";
+  if (project.stage === "已上线") return "提交归档";
+  return "查看复盘";
+}
+
+function AiScoreBadge({ project, compact = false }: { project?: Project; compact?: boolean }) {
+  if (!project) {
+    return (
+      <div className="ai-score-inline empty">
+        <strong>待生成</strong>
+        <span>立项评分等待项目申请材料补齐</span>
+      </div>
+    );
+  }
+  const lowestDimension = getLowestAiDimension(project);
+  return (
+    <div className={`ai-score-inline tone-${toneForAiRecommendation(project.aiScore.recommendation)}${compact ? " compact" : ""}`}>
+      <div className="ai-score-inline-head">
+        <strong>AI {project.aiScore.total}分</strong>
+        <StatusTag tone={toneForAiRecommendation(project.aiScore.recommendation)}>{project.aiScore.recommendation}</StatusTag>
+      </div>
+      <div className="ai-score-dimensions">
+        <span>业务价值 {project.aiScore.businessValue}</span>
+        <span>紧急程度 {project.aiScore.urgency}</span>
+        <span>可行性 {project.aiScore.feasibility}</span>
+      </div>
+      {!compact ? <p>{lowestDimension.label} {lowestDimension.value}分，{project.aiScore.reasons[0]}</p> : null}
+    </div>
+  );
+}
+
+function getLowestAiDimension(project: Project) {
+  return [
+    { label: "业务价值", value: project.aiScore.businessValue },
+    { label: "紧急程度", value: project.aiScore.urgency },
+    { label: "可行性", value: project.aiScore.feasibility }
+  ].sort((left, right) => left.value - right.value)[0];
+}
+
+function toneForAiRecommendation(recommendation: Project["aiScore"]["recommendation"]): Tone {
+  if (recommendation === "推荐立项") return "green";
+  if (recommendation === "谨慎推荐") return "orange";
+  return "red";
 }
 
 function toneForImplementation(value: string) {

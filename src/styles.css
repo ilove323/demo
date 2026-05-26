@@ -491,7 +491,7 @@ button {
 
 .page {
   display: grid;
-  gap: 18px;
+  gap: 16px;
 }
 
 .page-title {
@@ -503,7 +503,7 @@ button {
 
 .page-title h1,
 .page-placeholder h1 {
-  font-size: 26px;
+  font-size: 25px;
   letter-spacing: 0;
   margin: 0;
 }
@@ -556,12 +556,12 @@ button {
 }
 
 .panel {
-  padding: 16px;
+  padding: 18px;
 }
 
 .metric-card {
   border-top: 3px solid var(--primary);
-  padding: 16px;
+  padding: 18px;
 }
 
 .metric-card span {
@@ -572,7 +572,7 @@ button {
 
 .metric-card strong {
   display: block;
-  font-size: 28px;
+  font-size: 26px;
   margin: 8px 0;
 }
 
@@ -1101,9 +1101,13 @@ button {
   width: 100%;
 }
 
+.compact-entity-card {
+  min-height: 178px;
+}
+
 .entity-card:hover {
   border-color: #bfdbfe;
-  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.08);
   transform: translateY(-1px);
 }
 
@@ -1341,16 +1345,269 @@ button {
   gap: 10px;
 }
 
+.detail-list.relaxed {
+  gap: 0;
+}
+
 .detail-list div {
   align-items: center;
   border-bottom: 1px solid var(--line);
   display: flex;
+  gap: 16px;
   justify-content: space-between;
   padding-bottom: 8px;
 }
 
 .detail-list span {
   color: var(--muted);
+}
+
+.detail-list strong {
+  text-align: right;
+}
+
+.detail-hero {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+}
+
+.detail-hero-main {
+  align-items: flex-end;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+}
+
+.detail-hero h1 {
+  font-size: 28px;
+  letter-spacing: 0;
+  margin: 4px 0 8px;
+}
+
+.detail-hero p,
+.narrative-block p,
+.scope-card p {
+  color: var(--muted);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.detail-kicker {
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.detail-hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.detail-summary-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.summary-tile {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.summary-tile > span,
+.score-bar span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.summary-tile strong {
+  font-size: 24px;
+}
+
+.summary-tile small,
+.scope-card span {
+  color: var(--subtle);
+  line-height: 1.5;
+}
+
+.summary-tile.ai-total {
+  border-color: rgba(124, 58, 237, 0.28);
+}
+
+.detail-layout {
+  align-items: start;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+}
+
+.detail-main,
+.detail-side {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.detail-side {
+  position: sticky;
+  top: 16px;
+}
+
+.narrative-block {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.lifecycle.vertical,
+.stage-strip.vertical {
+  grid-template-columns: 1fr;
+}
+
+.priority-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.ai-score-panel {
+  border-color: rgba(37, 99, 235, 0.24);
+}
+
+.ai-score-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.score-bar {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.score-bar > div {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.score-bar strong {
+  font-size: 20px;
+}
+
+.ai-score-inline {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--primary);
+  border-radius: 8px;
+  color: var(--text);
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  text-align: left;
+}
+
+.ai-score-inline.tone-green { border-left-color: var(--success); }
+.ai-score-inline.tone-orange { border-left-color: var(--warning); }
+.ai-score-inline.tone-red { border-left-color: var(--danger); }
+
+.ai-score-inline.empty {
+  border-left-color: var(--muted);
+}
+
+.ai-score-inline.compact {
+  min-width: 210px;
+}
+
+.ai-score-inline-head {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.ai-score-inline-head strong {
+  font-size: 15px;
+}
+
+.ai-score-dimensions {
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 6px 10px;
+  line-height: 1.45;
+}
+
+.ai-score-inline p,
+.ai-score-inline.empty span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.ai-weight-note {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 12px;
+}
+
+.ai-weight-note strong {
+  color: var(--text);
+}
+
+.recommendation-box {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px;
+}
+
+.permission-scope-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.scope-card {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.scope-card > div {
+  align-items: flex-start;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
 }
 
 .bar-chart {
@@ -2158,6 +2415,11 @@ button {
   padding: 12px;
 }
 
+.assignment-strip.compact {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
 .assignment-controls {
   align-items: center;
   display: flex;
@@ -2211,6 +2473,10 @@ button {
 .linked-task-list {
   display: grid;
   gap: 10px;
+}
+
+.linked-task-list.relaxed {
+  gap: 12px;
 }
 
 .linked-task-card {
@@ -2443,6 +2709,10 @@ button {
 .allocation-list {
   display: grid;
   gap: 10px;
+}
+
+.contribution-list.compact {
+  margin-top: 12px;
 }
 
 .contribution-card,
@@ -2864,10 +3134,20 @@ button {
 
   .grid-4,
   .grid-3,
+  .detail-summary-grid,
+  .permission-scope-grid,
   .entity-card-grid,
   .resource-gantt-layout,
   .kanban {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .detail-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-side {
+    position: static;
   }
 }
 
@@ -2973,11 +3253,33 @@ button {
   .grid-4,
   .grid-3,
   .grid-2,
+  .detail-summary-grid,
+  .ai-score-grid,
+  .permission-scope-grid,
   .entity-card-grid,
   .resource-gantt-layout,
   .kanban,
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .detail-hero-main,
+  .scope-card > div,
+  .detail-list div {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .detail-hero h1 {
+    font-size: 22px;
+  }
+
+  .detail-hero-tags {
+    justify-content: flex-start;
+  }
+
+  .detail-list strong {
+    text-align: left;
   }
 
   .panel,
