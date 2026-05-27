@@ -18,6 +18,8 @@ export function Resources({ flows }: { flows: DemandProjectFlow[] }) {
   const totalUsed = supplierBudgets.reduce((sum, item) => sum + item.used, 0);
   const resourceGanttGroups = buildResourceGanttGroups(resourcePeople, resourceCalendars, projects);
   const resourceRiskAlerts = buildResourceRiskAlerts(resourcePeople);
+  const highLoadPeople = resourcePeople.filter((person) => resourceLoad(person) >= 85);
+  const overloadPeople = resourcePeople.filter((person) => resourceLoad(person) > 100);
 
   return (
     <section className="page">
@@ -30,7 +32,12 @@ export function Resources({ flows }: { flows: DemandProjectFlow[] }) {
         <MetricCard label="资源负载" value={`${Math.round((totalAssigned / totalCapacity) * 100)}%`} delta={`${totalAssigned}/${totalCapacity} 人时`} tone="cyan" />
         <MetricCard label="资源申请" value={String(resourceRequests.length)} delta="1 项待审批" tone="orange" />
         <MetricCard label="外采合同" value={`${Math.round(totalContract / 10000)}万`} delta={`已使用 ${Math.round(totalUsed / 10000)}万`} tone="violet" />
-        <MetricCard label="高负载人员" value="2" delta="可穿透查看占用来源" tone="red" />
+        <MetricCard
+          label="高负载人员"
+          value={String(highLoadPeople.length)}
+          delta={`${overloadPeople.length} 人超载 · ${highLoadPeople.length - overloadPeople.length} 人偏高`}
+          tone={overloadPeople.length > 0 ? "red" : "orange"}
+        />
       </div>
       <div className="panel">
         <SectionHeader
@@ -94,8 +101,8 @@ export function Resources({ flows }: { flows: DemandProjectFlow[] }) {
               <button className="entity-card person-card" key={person.name} onClick={() => setSelectedPerson(person)}>
                 <div className="entity-card-head">
                   <span>{person.role}</span>
-                  <StatusTag tone={person.assigned > person.capacity ? "red" : person.assigned / person.capacity > 0.85 ? "orange" : "green"}>
-                    {person.assigned > person.capacity ? "超负荷" : "可承接"}
+                  <StatusTag tone={resourceLoadTone(person)}>
+                    {resourceLoadStatus(person)}
                   </StatusTag>
                 </div>
                 <strong>{person.name}</strong>
@@ -107,8 +114,8 @@ export function Resources({ flows }: { flows: DemandProjectFlow[] }) {
                   <span>工作：{person.allocations[0]?.work ?? "暂无"}</span>
                 </div>
                 <div className="progress-cell">
-                  <ProgressBar value={Math.round((person.assigned / person.capacity) * 100)} />
-                  <span>{Math.round((person.assigned / person.capacity) * 100)}%</span>
+                  <ProgressBar value={resourceLoad(person)} />
+                  <span>{resourceLoad(person)}%</span>
                 </div>
               </button>
             ))}
@@ -190,7 +197,7 @@ export function Resources({ flows }: { flows: DemandProjectFlow[] }) {
             <div className="detail-list">
               <div><span>角色</span><strong>{selectedPerson.role}</strong></div>
               <div><span>本周负载</span><strong>{selectedPerson.assigned} / {selectedPerson.capacity}h</strong></div>
-              <div><span>负载状态</span><strong>{selectedPerson.assigned > selectedPerson.capacity ? "超负荷" : "正常"}</strong></div>
+              <div><span>负载状态</span><strong>{resourceLoadStatus(selectedPerson)}</strong></div>
             </div>
             <SectionHeader title="技能栈" />
             <ul className="pill-list">{selectedPerson.skills.map((skill) => <li key={skill}>{skill}</li>)}</ul>
@@ -244,6 +251,26 @@ export function Resources({ flows }: { flows: DemandProjectFlow[] }) {
 
 function money(value: number) {
   return `${Math.round(value / 10000)}万`;
+}
+
+function resourceLoad(person: ResourcePerson) {
+  return Math.round((person.assigned / Math.max(person.capacity, 1)) * 100);
+}
+
+function resourceLoadStatus(person: ResourcePerson) {
+  const load = resourceLoad(person);
+  if (load > 100) return "超载";
+  if (load >= 85) return "偏高";
+  if (load < 50) return "空闲";
+  return "可承接";
+}
+
+function resourceLoadTone(person: ResourcePerson) {
+  const load = resourceLoad(person);
+  if (load > 100) return "red";
+  if (load >= 85) return "orange";
+  if (load < 50) return "cyan";
+  return "green";
 }
 
 function ViewToggle({

@@ -1,5 +1,5 @@
 import { ChevronDown, SlidersHorizontal } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 export function FilterPanel({
@@ -16,6 +16,10 @@ export function FilterPanel({
   children: ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    setExpanded(false);
+  }, []);
 
   return (
     <div className={`filter-panel${expanded ? " expanded" : ""}`}>
