@@ -21,12 +21,20 @@ export type PageId =
 
 export type ProfileTab = "personal" | "notifications";
 
-export type WorkflowStageId = "draft" | "demandReview" | "solutionConfirm" | "projectStart" | "projectExecution" | "projectAcceptance" | "acceptedComplete";
-export type DemandStatus = "草稿" | "需求评审" | "方案确认" | "项目启动" | "项目进行" | "项目验收" | "验收完成" | "已打回" | "已放弃";
+export type WorkflowStageId =
+  | "demandReview"
+  | "solutionConfirm"
+  | "projectPrepare"
+  | "projectStart"
+  | "projectExecution"
+  | "projectComplete"
+  | "projectEnded";
+export type DemandStage = "review" | "solutionConfirm" | "returned" | "abandoned";
+export type DemandStatus = "需求评审" | "方案确认" | "已打回" | "已放弃";
 export type Priority = "P0" | "P1" | "P2" | "P3";
 export type ImplementationType = "内部实现" | "外部供应商" | "合作实现";
 export type ProjectType = "软件项目" | "硬件项目" | "软硬件协同";
-export type ProjectStage = "项目启动" | "项目进行" | "项目验收" | "验收完成";
+export type ProjectStage = "项目准备" | "项目启动" | "项目进行" | "项目完成" | "项目结束";
 export type TaskStatus = "待开始" | "进行中" | "测试中" | "已完成" | "暂停";
 export type RiskLevel = "低" | "中" | "高";
 export type NotificationChannel = "站内信" | "企业微信" | "机器人";
@@ -122,6 +130,7 @@ export interface Project {
   budget: number;
   usedBudget: number;
   personDays: number;
+  resourcePlan: ProjectResourcePlan;
   risk: RiskLevel;
   riskReason: string;
   riskResponse: string;
@@ -131,6 +140,16 @@ export interface Project {
   resources: string[];
   taskIds: string[];
   contributions: ContributionItem[];
+}
+
+export interface ProjectResourcePlan {
+  internalPersonDays: number;
+  needsExternalSupplier: boolean;
+  externalSupplierPersonDays: number;
+  externalSupplierRole: string;
+  externalSupplierName: string;
+  startEndDate?: string;
+  assignedResources: string[];
 }
 
 export interface ProjectAiScore {
@@ -151,7 +170,7 @@ export interface ContributionItem {
   status: string;
 }
 
-export type DeliveryRequestStatus = "草稿" | "方案确认中" | "待项目经理启动" | "退回方案确认" | "项目进行" | "项目验收" | "已关闭";
+export type DeliveryRequestStatus = "方案确认中" | "项目准备" | "项目启动" | "项目进行" | "项目完成" | "项目结束";
 
 export interface DeliveryRequest {
   id: string;
@@ -203,6 +222,8 @@ export interface DemandProjectFlow {
   title: string;
   mode: ImplementationType;
   currentNodeId: string;
+  currentDemandNodeId?: WorkflowStageId;
+  currentProjectNodeId?: WorkflowStageId;
   resourceRequest: {
     requester: string;
     need: string;
@@ -413,20 +434,16 @@ export interface RoleNotificationSubscription {
 }
 
 export type FlowActionId =
-  | "requester.submitReview"
   | "product.returnDemand"
   | "product.submitSolution"
   | "requester.abandonDemand"
-  | "requester.submitProjectRequest"
-  | "pm.startProject"
-  | "pm.returnSolution"
-  | "pm.assignDevelopers"
+  | "product.preCreateProject"
+  | "pm.assignResources"
+  | "product.startExecution"
   | "developer.createTask"
   | "developer.updateProgress"
   | "developer.completeTask"
-  | "pm.submitAcceptance"
-  | "product.completeAcceptance"
-  | "product.returnExecution"
+  | "product.submitProjectComplete"
   | "requester.submitScore";
 
 export interface FlowBoardAction {

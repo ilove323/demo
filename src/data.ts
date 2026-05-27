@@ -42,22 +42,42 @@ import type {
   WorkflowStageId
 } from "./types";
 
-const deliveryStageOrder: ProjectStage[] = ["项目启动", "项目进行", "项目验收", "验收完成"];
-const demandFlowOrder = ["草稿", "需求评审", "方案确认", "项目启动", "项目进行", "项目验收", "验收完成"];
+const deliveryStageOrder: ProjectStage[] = ["项目准备", "项目启动", "项目进行", "项目完成", "项目结束"];
+const demandFlowOrder = ["需求评审", "方案确认"];
 
 export const workflowStageLabels: Record<WorkflowStageId, string> = {
-  draft: "阶段0：草稿",
-  demandReview: "阶段1：需求评审",
-  solutionConfirm: "阶段2：方案确认",
-  projectStart: "阶段3：项目启动",
-  projectExecution: "阶段4：项目进行",
-  projectAcceptance: "阶段5：项目验收",
-  acceptedComplete: "阶段6：验收完成"
+  demandReview: "需求线：需求评审",
+  solutionConfirm: "需求线：方案确认",
+  projectPrepare: "项目线：项目准备",
+  projectStart: "项目线：项目启动",
+  projectExecution: "项目线：项目进行",
+  projectComplete: "项目线：项目完成",
+  projectEnded: "项目线：项目结束"
 };
 
 function projectStageTrack(current: ProjectStage) {
   const currentIndex = deliveryStageOrder.indexOf(current);
   return deliveryStageOrder.map((name, index) => ({ name, done: index <= currentIndex }));
+}
+
+function projectResourcePlan(
+  internalPersonDays: number,
+  needsExternalSupplier: boolean,
+  externalSupplierPersonDays: number,
+  externalSupplierRole: string,
+  externalSupplierName: string,
+  assignedResources: string[],
+  startEndDate?: string
+) {
+  return {
+    internalPersonDays,
+    needsExternalSupplier,
+    externalSupplierPersonDays,
+    externalSupplierRole,
+    externalSupplierName,
+    assignedResources,
+    startEndDate
+  };
 }
 
 function demandLifecycle(current: string) {
@@ -177,7 +197,7 @@ export const dashboardByRole: Record<string, DashboardConfig> = {
     focusTitle: "高管关注事项",
     metrics: [
       { label: "项目总数", value: "42", delta: "本季度新增 7 个", tone: "blue" },
-      { label: "进行中项目", value: "19", delta: "5 个进入项目验收", tone: "cyan" },
+      { label: "进行中项目", value: "19", delta: "5 个进入项目完成", tone: "cyan" },
       { label: "预算使用率", value: "71%", delta: "低于年度红线 9%", tone: "green" },
       { label: "平均交付评分", value: "4.5", delta: "较上月 +0.1", tone: "violet" }
     ],
@@ -193,19 +213,19 @@ export const dashboardByRole: Record<string, DashboardConfig> = {
       { label: "可用人天", value: "164", delta: "开发资源需排期", tone: "cyan" },
       { label: "预算预警", value: "4", delta: "供应商项目占 3 个", tone: "orange" }
     ],
-    todos: ["处理 CRM 合规改造项目启动", "为 SAP 项目指派开发", "确认 GxP 文档系统能否进入项目验收"]
+    todos: ["处理 CRM 合规改造项目启动", "为 SAP 项目指派开发", "确认 GxP 文档系统能否进入项目完成"]
   },
   product: {
     title: "产品经理工作台",
-    subtitle: "评审需求、设计方案、估算资源、发起方案确认并组织项目验收",
+    subtitle: "评审需求、设计方案、估算资源、发起方案确认并组织项目完成",
     focusTitle: "产品经理待办",
     metrics: [
       { label: "待需求评审", value: "8", delta: "P0/P1 共 4 个", tone: "orange" },
-      { label: "待项目验收", value: "6", delta: "2 个需退回或完成", tone: "green" },
+      { label: "待项目完成", value: "6", delta: "2 个需退回或完成", tone: "green" },
       { label: "方案确认中", value: "5", delta: "等待需求方确认", tone: "blue" },
       { label: "AI 高分需求", value: "4", delta: "建议优先推进", tone: "violet" }
     ],
-    todos: ["评审 CRM 拜访合规改造", "发起 GxP 文档系统验收完成", "补充算力中心资源投入测算"]
+    todos: ["评审 CRM 拜访合规改造", "发起 GxP 文档系统项目结束", "补充算力中心资源投入测算"]
   },
   businessOwner: {
     title: "需求方负责人工作台",
@@ -221,13 +241,13 @@ export const dashboardByRole: Record<string, DashboardConfig> = {
   },
   requester: {
     title: "需求方工作台",
-    subtitle: "提交需求、确认产品方案、发起项目申请、跟踪进度并最终评分",
+    subtitle: "提交需求、跟进需求评审、确认产品方案；项目由项目经理关联并推进",
     focusTitle: "我的需求待办",
     metrics: [
       { label: "我的需求", value: "5", delta: "2 个进行中", tone: "blue" },
       { label: "待确认方案", value: "1", delta: "CRM 规则待确认", tone: "orange" },
-      { label: "待最终评分", value: "2", delta: "验收完成后提交", tone: "green" },
-      { label: "平均评分", value: "4.6", delta: "本人验收记录", tone: "violet" }
+      { label: "进行中项目", value: "2", delta: "关联项目推进中", tone: "cyan" },
+      { label: "待验收", value: "1", delta: "等待验收处理", tone: "green" }
     ],
     todos: ["补充 CRM 拜访合规规则", "提交 LIMS 升级验收评分", "查看算力中心压测里程碑"]
   },
@@ -246,13 +266,12 @@ export const dashboardByRole: Record<string, DashboardConfig> = {
 };
 
 export const stageDistribution: ReportDatum[] = [
-  { label: "草稿", value: 8 },
   { label: "需求评审", value: 6 },
   { label: "方案确认", value: 5 },
   { label: "项目启动", value: 4 },
   { label: "项目进行", value: 13 },
-  { label: "项目验收", value: 6 },
-  { label: "验收完成", value: 9 }
+  { label: "项目完成", value: 6 },
+  { label: "项目结束", value: 9 }
 ];
 
 export const resourceTrend: ReportDatum[] = [
@@ -266,33 +285,33 @@ export const resourceTrend: ReportDatum[] = [
 
 export const demands: Demand[] = [
   {
-    id: "REQ-STAGE-0",
+    id: "REQ-REVIEW-001",
     name: "销售样品申请移动化",
     requester: "沈岚",
     team: "业务部门",
     priority: "P2",
-    status: "草稿",
-    handler: "待产品经理评审",
-    progress: 6,
+    status: "需求评审",
+    handler: "陈彦 / 产品",
+    progress: 18,
     targetDate: "2026-07-18",
     implementation: "内部实现",
     objective: "让需求方用手机提交样品申请、审批附件和期望到货时间，减少纸质流转。",
     description: "当前销售样品申请依赖线下表格和邮件，需求方正在补充审批节点、样品类型、附件模板和验收口径。",
-    milestones: ["草稿已保存", "待需求方发起需求评审"],
-    comments: ["用于验证需求方在阶段0点击“发起需求评审”", "需求方负责人可调整重要级别"],
-    linkedProject: "待项目申请",
+    milestones: ["需求已创建", "已进入需求评审"],
+    comments: ["用于验证创建需求成功后直接进入需求评审", "需求方负责人可调整重要级别"],
+    linkedProject: "待项目关联",
     score: undefined,
     analysis: {
       feasibility: "现有 H5 表单和附件能力可复用，关键是补齐审批节点和数据留痕要求。",
       valueScore: 76,
-      implementationReason: "草稿阶段尚未进入产品评审，当前实现方式只是需求方预估。",
+      implementationReason: "需求创建后已进入产品评审，当前实现方式等待产品经理确认。",
       resourcePlan: "待产品经理评审后估算。",
       budgetEstimate: 0,
-      budgetBasis: "草稿阶段未进入产品经理评审，暂无预算测算。",
+      budgetBasis: "需求评审阶段由产品经理补充预算测算。",
       iteration: "样品协同 V0.1"
     },
     priorityHistory: ["提交时 P2"],
-    lifecycleSteps: demandLifecycle("草稿")
+    lifecycleSteps: demandLifecycle("需求评审")
   },
   {
     id: "REQ-2026-041",
@@ -300,7 +319,7 @@ export const demands: Demand[] = [
     requester: "沈岚",
     team: "业务部门",
     priority: "P0",
-    status: "项目进行",
+    status: "方案确认",
     handler: "陈彦 / 产品",
     progress: 58,
     targetDate: "2026-06-18",
@@ -321,7 +340,7 @@ export const demands: Demand[] = [
       iteration: "SAP 核心平台 V2026.1"
     },
     priorityHistory: ["提交时 P1", "业务部门负责人调整为 P0：财务月结和供应链结算强依赖"],
-    lifecycleSteps: demandLifecycle("项目进行")
+    lifecycleSteps: demandLifecycle("方案确认")
   },
   {
     id: "REQ-2026-038",
@@ -329,9 +348,9 @@ export const demands: Demand[] = [
     requester: "周宁",
     team: "业务部门",
     priority: "P1",
-    status: "需求评审",
+    status: "方案确认",
     handler: "陈彦 / 产品",
-    progress: 26,
+    progress: 100,
     targetDate: "2026-07-05",
     implementation: "合作实现",
     objective: "满足医药代表拜访记录、合规审批和医生互动留痕要求。",
@@ -350,7 +369,7 @@ export const demands: Demand[] = [
       iteration: "CRM 合规 V3.2"
     },
     priorityHistory: ["提交时 P2", "业务部门负责人调整为 P1：合规审计前必须上线"],
-    lifecycleSteps: demandLifecycle("需求评审")
+    lifecycleSteps: demandLifecycle("方案确认")
   },
   {
     id: "REQ-STAGE-2",
@@ -364,10 +383,10 @@ export const demands: Demand[] = [
     targetDate: "2026-07-12",
     implementation: "内部实现",
     objective: "统一查看偏差、CAPA、责任人、到期提醒和关闭状态，减少质量复盘遗漏。",
-    description: "产品经理已完成解决方案和资源估算，等待需求方确认是否发起项目申请。",
+    description: "产品经理已完成解决方案和资源估算，方案确认后需求线结束，等待产品经理预创建并关联项目。",
     milestones: ["AI 评分已生成", "产品方案已提交", "等待需求方确认方案"],
-    comments: ["用于验证需求方在阶段2点击“发起项目申请 / 放弃需求”", "确认时必须填写留言"],
-    linkedProject: "待项目申请",
+    comments: ["用于验证产品经理把已确认方案的需求预创建为项目", "需求方仍可在方案确认阶段放弃需求"],
+    linkedProject: "待项目关联",
     score: undefined,
     analysis: {
       feasibility: "偏差和 CAPA 数据已经在质量系统沉淀，可先做只读看板和到期提醒。",
@@ -387,14 +406,14 @@ export const demands: Demand[] = [
     requester: "沈岚",
     team: "业务部门",
     priority: "P1",
-    status: "项目验收",
+    status: "方案确认",
     handler: "陈彦 / 产品",
     progress: 92,
     targetDate: "2026-05-29",
     implementation: "合作实现",
     objective: "建立 SOP、验证文档、培训记录和电子签名的统一管理入口。",
     description: "支持文档版本、审批流、电子签名、培训任务、审计追踪和归档检索。",
-    milestones: ["开发完成", "验证测试通过", "业务部门项目验收"],
+    milestones: ["开发完成", "项目完成通过", "等待项目关闭"],
     comments: ["验证环境已准备", "需业务部门负责人补充评分"],
     linkedProject: "GxP 电子文档与验证平台",
     score: undefined,
@@ -408,7 +427,7 @@ export const demands: Demand[] = [
       iteration: "质量数字化 V1.5"
     },
     priorityHistory: ["提交时 P1", "保持 P1：年度 GMP 审计前验收"],
-    lifecycleSteps: demandLifecycle("项目验收")
+    lifecycleSteps: demandLifecycle("方案确认")
   },
   {
     id: "REQ-2026-030",
@@ -416,7 +435,7 @@ export const demands: Demand[] = [
     requester: "沈岚",
     team: "业务部门",
     priority: "P1",
-    status: "项目进行",
+    status: "方案确认",
     handler: "陈彦 / 产品",
     progress: 64,
     targetDate: "2026-06-14",
@@ -437,7 +456,7 @@ export const demands: Demand[] = [
       iteration: "业务数据门户 V1.0"
     },
     priorityHistory: ["提交时 P2", "业务部门负责人调整为 P1：月度经营复盘依赖"],
-    lifecycleSteps: demandLifecycle("项目进行")
+    lifecycleSteps: demandLifecycle("方案确认")
   },
   {
     id: "REQ-2026-026",
@@ -445,14 +464,14 @@ export const demands: Demand[] = [
     requester: "沈岚",
     team: "业务部门",
     priority: "P2",
-    status: "验收完成",
+    status: "方案确认",
     handler: "陈彦 / 产品",
     progress: 100,
     targetDate: "2026-05-12",
     implementation: "合作实现",
     objective: "提升实验样本、检测结果、仪器接口和审计追踪管理效率。",
     description: "升级 LIMS 样本流转、仪器数据采集、结果复核、电子签名和报表能力。",
-    milestones: ["供应商交付", "验证完成", "需求方验收完成"],
+    milestones: ["供应商交付", "项目完成通过", "需求方评价完成"],
     comments: ["仪器接口稳定性达到预期", "需求方评分较高"],
     linkedProject: "LIMS 实验室系统升级",
     score: 4.8,
@@ -473,7 +492,7 @@ export const demands: Demand[] = [
       date: "2026-05-12"
     },
     priorityHistory: ["提交时 P2", "保持 P2：开发效率专项"],
-    lifecycleSteps: demandLifecycle("验收完成")
+    lifecycleSteps: demandLifecycle("方案确认")
   },
   {
     id: "REQ-2026-019",
@@ -481,7 +500,7 @@ export const demands: Demand[] = [
     requester: "高翔",
     team: "业务部门",
     priority: "P2",
-    status: "项目进行",
+    status: "方案确认",
     handler: "陈彦 / 产品",
     progress: 76,
     targetDate: "2026-06-10",
@@ -502,7 +521,7 @@ export const demands: Demand[] = [
       iteration: "算法算力平台 V1.0"
     },
     priorityHistory: ["提交时 P2", "保持 P2：GPU 到货前不升优先级"],
-    lifecycleSteps: demandLifecycle("项目进行")
+    lifecycleSteps: demandLifecycle("方案确认")
   },
   {
     id: "REQ-2026-014",
@@ -510,7 +529,7 @@ export const demands: Demand[] = [
     requester: "周宁",
     team: "业务部门",
     priority: "P3",
-    status: "项目启动",
+    status: "方案确认",
     handler: "陈彦 / 产品",
     progress: 12,
     targetDate: "2026-07-20",
@@ -531,7 +550,7 @@ export const demands: Demand[] = [
       iteration: "培训中心硬件更新 V1.0"
     },
     priorityHistory: ["提交时 P3", "保持 P3：可与季度培训计划错峰实施"],
-    lifecycleSteps: demandLifecycle("项目启动")
+    lifecycleSteps: demandLifecycle("方案确认")
   }
 ];
 
@@ -549,6 +568,7 @@ export const projects: Project[] = [
     budget: 1880000,
     usedBudget: 936000,
     personDays: 132,
+    resourcePlan: projectResourcePlan(46, true, 86, "SAP 实施顾问 / ABAP 增强", "明德 SAP 实施顾问", ["吴承", "姜曼", "明德 SAP 实施顾问"], "2026-05-25"),
     risk: "中",
     riskReason: "主数据冻结窗口和外围接口排期存在依赖",
     riskResponse: "产品经理推动主数据冻结和接口联调计划；项目经理已完成接口开发与测试资源指派，开发按任务推进，若 6 月 3 日前未完成则拆分非关键接口二期上线。",
@@ -582,11 +602,12 @@ export const projects: Project[] = [
     supplierManager: "李书航",
     projectType: "软件项目",
     implementation: "合作实现",
-    stage: "项目启动",
+    stage: "项目准备",
     progress: 0,
     budget: 720000,
     usedBudget: 160000,
     personDays: 64,
+    resourcePlan: projectResourcePlan(32, true, 32, "CRM 顾问 / 移动端改造", "星瀚 CRM 实施商", []),
     risk: "低",
     riskReason: "供应商报价和移动端合规留痕方案仍在评审",
     riskResponse: "产品经理组织供应商评分并收敛合规方案；项目经理只在资源窗口合适后启动项目，开发与供应商按确认方案执行。",
@@ -598,14 +619,14 @@ export const projects: Project[] = [
       recommendation: "推荐立项",
       reasons: ["拜访合规留痕直接支撑审计要求和销售行为规范", "移动 H5 场景明确但供应商报价仍需冻结", "实现依赖 CRM 供应商和内部接口协作，需先完成方案评审"]
     },
-    stages: projectStageTrack("项目启动"),
+    stages: projectStageTrack("项目准备"),
     milestones: [
       { name: "合规规则确认", date: "2026-05-30", status: "进行中" },
       { name: "供应商方案定稿", date: "2026-06-08", status: "未开始" },
       { name: "移动端 UAT", date: "2026-07-05", status: "未开始" }
     ],
     resources: ["产品经理 1 人", "CRM 供应商 2 人", "移动端开发 1 人", "接口开发 1 人"],
-    taskIds: ["TASK-902", "TASK-905", "TASK-906"],
+    taskIds: [],
     contributions: [
       { party: "IT部", type: "内部IT", responsibility: "医生主数据、权限接口和移动端联调支持", effort: "32 人天", cost: "内部成本", status: "分析中" },
       { party: "星瀚 CRM 实施商", type: "外部供应商", responsibility: "CRM 配置、合规审批流、拜访留痕和报价交付", effort: "32 人天", cost: "72 万合同", status: "方案评审" },
@@ -620,11 +641,12 @@ export const projects: Project[] = [
     supplierManager: "李书航",
     projectType: "软件项目",
     implementation: "合作实现",
-    stage: "项目验收",
+    stage: "项目完成",
     progress: 92,
     budget: 620000,
     usedBudget: 548000,
     personDays: 72,
+    resourcePlan: projectResourcePlan(52, true, 20, "GxP 验证咨询", "信合 GxP 验证咨询", ["陆川", "姜曼", "信合 GxP 验证咨询"], "2026-05-20"),
     risk: "低",
     riskReason: "待业务部门完成验收评分",
     riskResponse: "产品经理已发起业务部门验收邀请，开发和供应商补齐验证包归档材料。",
@@ -636,7 +658,7 @@ export const projects: Project[] = [
       recommendation: "推荐立项",
       reasons: ["GxP 文档和审计追踪是合规基础能力", "验证咨询与内部开发分工清晰", "项目已进入验收支持，交付确定性高"]
     },
-    stages: projectStageTrack("项目验收"),
+    stages: projectStageTrack("项目完成"),
     milestones: [
       { name: "验证测试通过", date: "2026-05-20", status: "完成" },
       { name: "需求方验收", date: "2026-05-29", status: "进行中" }
@@ -662,6 +684,7 @@ export const projects: Project[] = [
     budget: 280000,
     usedBudget: 142000,
     personDays: 58,
+    resourcePlan: projectResourcePlan(58, false, 0, "无", "无外部供应商", ["姜曼", "陆川", "吴承"], "2026-05-25"),
     risk: "中",
     riskReason: "指标口径和部门数据权限需要业务部门负责人最终确认",
     riskResponse: "产品经理将口径冻结会提前到 5 月 31 日，开发按已指派任务先完成权限模型和审计日志底座。",
@@ -694,11 +717,12 @@ export const projects: Project[] = [
     supplierManager: "李书航",
     projectType: "软硬件协同",
     implementation: "合作实现",
-    stage: "验收完成",
+    stage: "项目结束",
     progress: 100,
     budget: 860000,
     usedBudget: 842000,
     personDays: 36,
+    resourcePlan: projectResourcePlan(18, true, 36, "LIMS 供应商实施", "LIMS 供应商", ["陆川", "LIMS 供应商"], "2026-04-28"),
     risk: "低",
     riskReason: "已完成上线复盘",
     riskResponse: "进入运维观察期，LIMS 供应商保留 2 周问题响应窗口。",
@@ -710,7 +734,7 @@ export const projects: Project[] = [
       recommendation: "推荐立项",
       reasons: ["实验室样本流程升级对开发效率和数据合规有明确价值", "供应商能力成熟，已完成上线复盘", "后续主要风险在运维观察和问题响应窗口"]
     },
-    stages: projectStageTrack("验收完成"),
+    stages: projectStageTrack("项目结束"),
     milestones: [
       { name: "供应商交付", date: "2026-04-28", status: "完成" },
       { name: "正式上线", date: "2026-05-12", status: "完成" }
@@ -736,6 +760,7 @@ export const projects: Project[] = [
     budget: 3260000,
     usedBudget: 2480000,
     personDays: 98,
+    resourcePlan: projectResourcePlan(62, true, 36, "硬件供应商 / 机房实施", "云算科技", ["韩冰", "罗清", "云算科技"], "2026-05-18"),
     risk: "高",
     riskReason: "GPU 交付批次和机房电力扩容存在不确定性",
     riskResponse: "先上线 12 卡试运行环境，完整集群等待第二批设备到货；高管周会确认扩容预算。",
@@ -773,6 +798,7 @@ export const projects: Project[] = [
     budget: 450000,
     usedBudget: 30000,
     personDays: 8,
+    resourcePlan: projectResourcePlan(8, true, 42, "外部音视频集成商", "远见智能会议集成商", ["远见智能实施"]),
     risk: "低",
     riskReason: "现场踏勘尚未完成，设备清单和布线窗口待确认",
     riskResponse: "产品经理确认外部供应商实施方案；项目经理启动后锁定供应商踏勘和施工窗口，避免影响季度合规培训。",
@@ -791,7 +817,7 @@ export const projects: Project[] = [
       { name: "安装验收", date: "2026-07-20", status: "未开始" }
     ],
     resources: ["外部集成商 3 人", "项目经理治理 1 人", "需求方验收 2 人"],
-    taskIds: ["TASK-621", "TASK-622", "TASK-623"],
+    taskIds: [],
     contributions: [
       { party: "远见智能会议集成商", type: "外部供应商", responsibility: "设备采购、弱电布线、音视频调试、录播联动和现场培训", effort: "42 人天", cost: "45 万合同", status: "待踏勘" },
       { party: "业务部门", type: "业务方", responsibility: "培训场景、验收标准和使用效果确认", effort: "6 人天", cost: "业务投入", status: "待评审" }
@@ -840,48 +866,6 @@ export const initialTasks: Task[] = [
     due: "2026-06-10",
     role: "前端/移动端开发",
     description: "补充批次成本核算校验看板和异常提示。",
-    worklogs: []
-  },
-  {
-    id: "TASK-902",
-    title: "CRM 拜访合规规则配置",
-    projectId: "PRJ-124",
-    project: "CRM 合规拜访改造",
-    owner: "姜曼",
-    status: "待开始",
-    estimate: 24,
-    actual: 0,
-    due: "2026-06-08",
-    role: "前端/移动端开发",
-    description: "配置拜访签到、资料推送、医学审批和异常预警规则。",
-    worklogs: []
-  },
-  {
-    id: "TASK-905",
-    title: "CRM 医生主数据同步接口",
-    projectId: "PRJ-124",
-    project: "CRM 合规拜访改造",
-    owner: "吴承",
-    status: "待开始",
-    estimate: 18,
-    actual: 0,
-    due: "2026-06-12",
-    role: "接口开发",
-    description: "同步医生主数据、拜访授权和医学审批角色信息。",
-    worklogs: []
-  },
-  {
-    id: "TASK-906",
-    title: "CRM 移动端留痕页面",
-    projectId: "PRJ-124",
-    project: "CRM 合规拜访改造",
-    owner: "姜曼",
-    status: "待开始",
-    estimate: 26,
-    actual: 0,
-    due: "2026-06-18",
-    role: "前端/移动端开发",
-    description: "实现签到、资料推送、审批意见和异常留痕页面。",
     worklogs: []
   },
   {
@@ -1051,48 +1035,6 @@ export const initialTasks: Task[] = [
     role: "AI 平台工程师",
     description: "压测存储吞吐、训练数据读取和多任务并发性能。",
     worklogs: [{ date: "2026-05-29", hours: 4, note: "完成首轮吞吐压测" }]
-  },
-  {
-    id: "TASK-621",
-    title: "培训室现场踏勘",
-    projectId: "PRJ-097",
-    project: "培训中心音视频设备更新",
-    owner: "远见智能实施",
-    status: "待开始",
-    estimate: 16,
-    actual: 0,
-    due: "2026-05-29",
-    role: "外部实施",
-    description: "完成培训室弱电、拾音、投屏、录播和会议联动现场踏勘。",
-    worklogs: []
-  },
-  {
-    id: "TASK-622",
-    title: "音视频设备安装调试",
-    projectId: "PRJ-097",
-    project: "培训中心音视频设备更新",
-    owner: "远见智能实施",
-    status: "待开始",
-    estimate: 42,
-    actual: 0,
-    due: "2026-07-10",
-    role: "外部实施",
-    description: "完成设备安装、弱电布线、投屏、拾音和会议联动调试。",
-    worklogs: []
-  },
-  {
-    id: "TASK-623",
-    title: "培训中心录播联动验收",
-    projectId: "PRJ-097",
-    project: "培训中心音视频设备更新",
-    owner: "远见智能实施",
-    status: "待开始",
-    estimate: 12,
-    actual: 0,
-    due: "2026-07-20",
-    role: "外部实施",
-    description: "按培训场景完成录播、远程会议和效果验收。",
-    worklogs: []
   }
 ];
 
@@ -1102,11 +1044,10 @@ export const resourcePeople: ResourcePerson[] = [
     role: "接口开发",
     skills: ["SAP 接口", "Java", "主数据治理"],
     capacity: 40,
-    assigned: 38,
+    assigned: 30,
     allocations: [
       { project: "SAP S/4HANA 财务供应链一体化", work: "主数据迁移校验、采购入库接口", hours: 18, status: "进行中" },
       { project: "GxP 电子文档与验证平台", work: "电子签名接口复核", hours: 8, status: "测试中" },
-      { project: "CRM 合规拜访改造", work: "医生主数据同步接口", hours: 8, status: "待开始" },
       { project: "业务指标自助报表门户", work: "报表导出接口和数据权限校验", hours: 4, status: "排期中" }
     ]
   },
@@ -1115,9 +1056,8 @@ export const resourcePeople: ResourcePerson[] = [
     role: "前端/移动端开发",
     skills: ["React", "CRM", "合规留痕"],
     capacity: 40,
-    assigned: 36,
+    assigned: 20,
     allocations: [
-      { project: "CRM 合规拜访改造", work: "拜访签到与合规审批移动端页面", hours: 16, status: "待开始" },
       { project: "GxP 电子文档与验证平台", work: "培训记录查询和审计追踪页面", hours: 8, status: "进行中" },
       { project: "SAP S/4HANA 财务供应链一体化", work: "主数据校验看板", hours: 4, status: "排期中" },
       { project: "业务指标自助报表门户", work: "指标口径配置页面", hours: 8, status: "进行中" }
@@ -1140,11 +1080,10 @@ export const resourcePeople: ResourcePerson[] = [
     role: "全栈开发",
     skills: ["Node.js", "电子签名", "审计追踪"],
     capacity: 40,
-    assigned: 37,
+    assigned: 29,
     allocations: [
       { project: "GxP 电子文档与验证平台", work: "电子签名审批流与审计追踪缺陷", hours: 14, status: "测试中" },
       { project: "LIMS 实验室系统升级", work: "验证报表导出接口", hours: 9, status: "已完成" },
-      { project: "CRM 合规拜访改造", work: "合规审批规则服务", hours: 8, status: "分析中" },
       { project: "业务指标自助报表门户", work: "权限审计日志和角色过滤", hours: 6, status: "进行中" }
     ]
   },
@@ -1166,20 +1105,16 @@ export const resourceCalendars: ResourceCalendarEntry[] = [
   { person: "吴承", date: "2026-05-25", timeSlot: "上午", taskId: "TASK-901", task: "SAP 主数据迁移校验", projectId: "PRJ-126", project: "SAP S/4HANA 财务供应链一体化", hours: 4, status: "进行中" },
   { person: "吴承", date: "2026-05-25", timeSlot: "下午", taskId: "TASK-903", task: "SAP 采购入库接口联调", projectId: "PRJ-126", project: "SAP S/4HANA 财务供应链一体化", hours: 4, status: "进行中" },
   { person: "吴承", date: "2026-05-26", timeSlot: "上午", taskId: "TASK-818", task: "GxP 电子签名审批流", projectId: "PRJ-119", project: "GxP 电子文档与验证平台", hours: 3, status: "测试中" },
-  { person: "吴承", date: "2026-05-26", timeSlot: "下午", taskId: "TASK-905", task: "CRM 医生主数据同步接口", projectId: "PRJ-124", project: "CRM 合规拜访改造", hours: 4, status: "待开始" },
   { person: "吴承", date: "2026-05-27", timeSlot: "全天", taskId: "TASK-901", task: "SAP 主数据迁移校验", projectId: "PRJ-126", project: "SAP S/4HANA 财务供应链一体化", hours: 7, status: "进行中" },
   { person: "吴承", date: "2026-05-28", timeSlot: "上午", taskId: "TASK-901", task: "SAP 主数据迁移校验", projectId: "PRJ-126", project: "SAP S/4HANA 财务供应链一体化", hours: 4, status: "进行中" },
   { person: "吴承", date: "2026-05-29", timeSlot: "下午", taskId: "TASK-818", task: "GxP 电子签名审批流", projectId: "PRJ-119", project: "GxP 电子文档与验证平台", hours: 3, status: "测试中" },
   { person: "吴承", date: "2026-06-02", timeSlot: "全天", taskId: "TASK-903", task: "SAP 采购入库接口联调", projectId: "PRJ-126", project: "SAP S/4HANA 财务供应链一体化", hours: 8, status: "待开始" },
   { person: "吴承", date: "2026-06-03", timeSlot: "下午", taskId: "TASK-843", task: "业务报表导出接口", projectId: "PRJ-116", project: "业务指标自助报表门户", hours: 4, status: "待开始" },
 
-  { person: "姜曼", date: "2026-05-25", timeSlot: "上午", taskId: "TASK-902", task: "CRM 拜访合规规则配置", projectId: "PRJ-124", project: "CRM 合规拜访改造", hours: 4, status: "待开始" },
   { person: "姜曼", date: "2026-05-25", timeSlot: "下午", taskId: "TASK-819", task: "GxP 审计追踪报表", projectId: "PRJ-119", project: "GxP 电子文档与验证平台", hours: 3, status: "进行中" },
-  { person: "姜曼", date: "2026-05-26", timeSlot: "全天", taskId: "TASK-906", task: "CRM 移动端留痕页面", projectId: "PRJ-124", project: "CRM 合规拜访改造", hours: 7, status: "待开始" },
   { person: "姜曼", date: "2026-05-27", timeSlot: "上午", taskId: "TASK-819", task: "GxP 审计追踪报表", projectId: "PRJ-119", project: "GxP 电子文档与验证平台", hours: 4, status: "进行中" },
   { person: "姜曼", date: "2026-05-28", timeSlot: "下午", taskId: "TASK-904", task: "SAP 批次成本核算联调", projectId: "PRJ-126", project: "SAP S/4HANA 财务供应链一体化", hours: 4, status: "待开始" },
   { person: "姜曼", date: "2026-05-29", timeSlot: "上午", taskId: "TASK-846", task: "业务指标口径配置页面", projectId: "PRJ-116", project: "业务指标自助报表门户", hours: 4, status: "进行中" },
-  { person: "姜曼", date: "2026-06-04", timeSlot: "全天", taskId: "TASK-906", task: "CRM 移动端留痕页面", projectId: "PRJ-124", project: "CRM 合规拜访改造", hours: 8, status: "待开始" },
 
   { person: "韩冰", date: "2026-05-25", timeSlot: "上午", taskId: "TASK-881", task: "GPU 集群监控告警", projectId: "PRJ-131", project: "算力中心 GPU 集群一期", hours: 4, status: "暂停" },
   { person: "韩冰", date: "2026-05-26", timeSlot: "上午", taskId: "TASK-882", task: "GPU 作业调度平台", projectId: "PRJ-131", project: "算力中心 GPU 集群一期", hours: 4, status: "测试中" },
@@ -1188,7 +1123,6 @@ export const resourceCalendars: ResourceCalendarEntry[] = [
   { person: "韩冰", date: "2026-06-03", timeSlot: "全天", taskId: "TASK-882", task: "GPU 作业调度平台", projectId: "PRJ-131", project: "算力中心 GPU 集群一期", hours: 8, status: "测试中" },
 
   { person: "陆川", date: "2026-05-25", timeSlot: "上午", taskId: "TASK-817", task: "GxP 文档审批流验证缺陷", projectId: "PRJ-119", project: "GxP 电子文档与验证平台", hours: 4, status: "测试中" },
-  { person: "陆川", date: "2026-05-25", timeSlot: "下午", taskId: "TASK-902", task: "CRM 拜访合规规则配置", projectId: "PRJ-124", project: "CRM 合规拜访改造", hours: 4, status: "待开始" },
   { person: "陆川", date: "2026-05-26", timeSlot: "全天", taskId: "TASK-817", task: "GxP 文档审批流验证缺陷", projectId: "PRJ-119", project: "GxP 电子文档与验证平台", hours: 7, status: "测试中" },
   { person: "陆川", date: "2026-05-27", timeSlot: "下午", taskId: "TASK-842", task: "业务报表权限审计日志", projectId: "PRJ-116", project: "业务指标自助报表门户", hours: 4, status: "进行中" },
   { person: "陆川", date: "2026-05-28", timeSlot: "上午", taskId: "TASK-734", task: "LIMS 审计追踪验证", projectId: "PRJ-108", project: "LIMS 实验室系统升级", hours: 4, status: "已完成" },
@@ -1198,13 +1132,9 @@ export const resourceCalendars: ResourceCalendarEntry[] = [
   { person: "罗清", date: "2026-05-25", timeSlot: "上午", taskId: "TASK-883", task: "GPU 存储网络压测", projectId: "PRJ-131", project: "算力中心 GPU 集群一期", hours: 4, status: "进行中" },
   { person: "罗清", date: "2026-05-29", timeSlot: "上午", taskId: "TASK-883", task: "GPU 存储网络压测", projectId: "PRJ-131", project: "算力中心 GPU 集群一期", hours: 4, status: "进行中" },
 
-  { person: "吴承", date: "2026-06-05", timeSlot: "全天", taskId: "TASK-905", task: "CRM 医生主数据同步接口", projectId: "PRJ-124", project: "CRM 合规拜访改造", hours: 8, status: "待开始" },
   { person: "吴承", date: "2026-06-09", timeSlot: "上午", taskId: "TASK-843", task: "业务报表导出接口", projectId: "PRJ-116", project: "业务指标自助报表门户", hours: 4, status: "待开始" },
-  { person: "吴承", date: "2026-06-12", timeSlot: "下午", taskId: "TASK-905", task: "CRM 医生主数据同步接口", projectId: "PRJ-124", project: "CRM 合规拜访改造", hours: 4, status: "待开始" },
 
-  { person: "姜曼", date: "2026-06-10", timeSlot: "全天", taskId: "TASK-906", task: "CRM 移动端留痕页面", projectId: "PRJ-124", project: "CRM 合规拜访改造", hours: 8, status: "待开始" },
   { person: "姜曼", date: "2026-06-14", timeSlot: "上午", taskId: "TASK-846", task: "业务指标口径配置页面", projectId: "PRJ-116", project: "业务指标自助报表门户", hours: 4, status: "进行中" },
-  { person: "姜曼", date: "2026-07-03", timeSlot: "下午", taskId: "TASK-906", task: "CRM 移动端留痕页面", projectId: "PRJ-124", project: "CRM 合规拜访改造", hours: 4, status: "待开始" },
 
   { person: "韩冰", date: "2026-06-07", timeSlot: "全天", taskId: "TASK-883", task: "GPU 存储网络压测", projectId: "PRJ-131", project: "算力中心 GPU 集群一期", hours: 8, status: "进行中" },
   { person: "韩冰", date: "2026-06-18", timeSlot: "上午", taskId: "TASK-882", task: "GPU 作业调度平台", projectId: "PRJ-131", project: "算力中心 GPU 集群一期", hours: 4, status: "测试中" },
@@ -1212,7 +1142,6 @@ export const resourceCalendars: ResourceCalendarEntry[] = [
 
   { person: "陆川", date: "2026-06-06", timeSlot: "全天", taskId: "TASK-842", task: "业务报表权限审计日志", projectId: "PRJ-116", project: "业务指标自助报表门户", hours: 8, status: "进行中" },
   { person: "陆川", date: "2026-06-13", timeSlot: "下午", taskId: "TASK-817", task: "GxP 文档审批流验证缺陷", projectId: "PRJ-119", project: "GxP 电子文档与验证平台", hours: 3, status: "测试中" },
-  { person: "陆川", date: "2026-07-02", timeSlot: "上午", taskId: "TASK-902", task: "CRM 拜访合规规则配置", projectId: "PRJ-124", project: "CRM 合规拜访改造", hours: 4, status: "待开始" },
 
   { person: "罗清", date: "2026-06-04", timeSlot: "全天", taskId: "TASK-883", task: "GPU 存储网络压测", projectId: "PRJ-131", project: "算力中心 GPU 集群一期", hours: 8, status: "进行中" },
   { person: "罗清", date: "2026-06-11", timeSlot: "下午", taskId: "TASK-882", task: "GPU 作业调度平台", projectId: "PRJ-131", project: "算力中心 GPU 集群一期", hours: 4, status: "测试中" },
@@ -1239,7 +1168,7 @@ export const deliveryRequests: DeliveryRequest[] = [
     supplierNeed: "无外部供应商",
     status: "方案确认中",
     submittedAt: "2026-05-26",
-    decision: "产品经理已提交方案，等待需求方确认后正式发起项目申请。"
+    decision: "产品经理已提交方案，方案确认后可预创建项目并关联需求。"
   },
   {
     id: "DR-SAP-041",
@@ -1251,7 +1180,7 @@ export const deliveryRequests: DeliveryRequest[] = [
     requestedMode: "合作实现",
     resourceNeed: "ABAP 开发 2 人、接口开发 2 人、测试 2 人，窗口 2026-05-25 至 2026-06-18",
     supplierNeed: "明德 SAP 实施顾问负责蓝图、FI/MM 配置和 ABAP 增强",
-    status: "待项目经理启动",
+    status: "项目进行",
     submittedAt: "2026-05-25",
     decision: "产品经理已完成方案和资源测算，等待唯一项目经理判断资源并启动项目。"
   },
@@ -1265,9 +1194,9 @@ export const deliveryRequests: DeliveryRequest[] = [
     requestedMode: "合作实现",
     resourceNeed: "移动端开发 1 人、接口开发 1 人、CRM 供应商技术评估 6 人天",
     supplierNeed: "星瀚 CRM 实施商提供合规审批流、移动端留痕和报价方案",
-    status: "退回方案确认",
+    status: "项目准备",
     submittedAt: "2026-05-24",
-    decision: "项目经理要求产品经理在需求评审补充医学审批节点和预算上限后再正式受理。"
+    decision: "产品经理已预创建项目，等待项目经理分配开发与外部供应商资源。"
   },
   {
     id: "DR-OPS-030",
@@ -1284,6 +1213,48 @@ export const deliveryRequests: DeliveryRequest[] = [
     decision: "已转为内部实现项目，项目经理完成开发指派。"
   },
   {
+    id: "DR-GPU-019",
+    demandId: "REQ-2026-019",
+    projectId: "PRJ-131",
+    title: "算力中心 GPU 集群一期项目预创建",
+    productOwner: "陈彦",
+    projectManager: "李书航",
+    requestedMode: "合作实现",
+    resourceNeed: "基础架构 2 人、平台开发 1 人、网络工程师 1 人，共 62 人天",
+    supplierNeed: "云算科技负责 GPU 服务器、存储网络、机房上架和硬件维保，外采 36 人天",
+    status: "项目进行",
+    submittedAt: "2026-05-16",
+    decision: "项目经理已分配内部平台开发和外部供应商资源，开发与供应商按压测里程碑推进。"
+  },
+  {
+    id: "DR-GXP-033",
+    demandId: "REQ-2026-033",
+    projectId: "PRJ-119",
+    title: "GxP 电子文档与验证平台项目预创建",
+    productOwner: "陈彦",
+    projectManager: "李书航",
+    requestedMode: "合作实现",
+    resourceNeed: "全栈开发 1 人、前端开发 1 人、验证测试 1 人，共 52 人天",
+    supplierNeed: "信合 GxP 验证咨询提供验证策略、脚本和验证包复核，外采 20 人天",
+    status: "项目完成",
+    submittedAt: "2026-05-10",
+    decision: "项目交付已完成，等待需求方完成最终评分。"
+  },
+  {
+    id: "DR-LIMS-026",
+    demandId: "REQ-2026-026",
+    projectId: "PRJ-108",
+    title: "LIMS 实验室系统升级项目预创建",
+    productOwner: "陈彦",
+    projectManager: "李书航",
+    requestedMode: "合作实现",
+    resourceNeed: "内部验证测试 1 人，共 18 人天",
+    supplierNeed: "LIMS 供应商负责系统升级、样本流程配置和接口适配，外采 36 人天",
+    status: "项目结束",
+    submittedAt: "2026-04-18",
+    decision: "需求方已完成评分，项目结束并进入运维观察。"
+  },
+  {
     id: "DR-AV-014",
     demandId: "REQ-2026-014",
     projectId: "PRJ-097",
@@ -1293,9 +1264,9 @@ export const deliveryRequests: DeliveryRequest[] = [
     requestedMode: "外部供应商",
     resourceNeed: "IT 项目经理治理 8 人天，业务部门预留验收 6 人天",
     supplierNeed: "远见智能会议集成商完成踏勘、设备清单、施工和现场培训",
-    status: "待项目经理启动",
+    status: "项目启动",
     submittedAt: "2026-05-25",
-    decision: "产品经理确认纯外部供应商实施，等待项目经理启动并安排踏勘。"
+    decision: "产品经理确认纯外部供应商实施，等项目启动并安排踏勘。"
   }
 ];
 
@@ -1304,29 +1275,20 @@ function workflowNodes(
   owners: { requester: string; product: string; pm: string; developers: string; reviewer?: string },
   abandoned = false
 ) {
-  const order: WorkflowStageId[] = ["draft", "demandReview", "solutionConfirm", "projectStart", "projectExecution", "projectAcceptance", "acceptedComplete"];
-  const currentIndex = order.indexOf(current);
-  const statusFor = (stageId: WorkflowStageId) => {
+  const demandOrder: WorkflowStageId[] = ["demandReview", "solutionConfirm"];
+  const projectOrder: WorkflowStageId[] = ["projectPrepare", "projectStart", "projectExecution", "projectComplete", "projectEnded"];
+  const demandCurrent = demandCurrentForWorkflow(current);
+  const projectCurrent = projectCurrentForWorkflow(current);
+  const statusFor = (stageId: WorkflowStageId, order: WorkflowStageId[], currentStage?: WorkflowStageId) => {
+    if (!currentStage) return "待开始" as const;
     const index = order.indexOf(stageId);
-    if (abandoned && stageId === current) return "风险" as const;
+    const currentIndex = order.indexOf(currentStage);
+    if (abandoned && stageId === currentStage) return "风险" as const;
     if (index < currentIndex) return "已完成" as const;
-    if (index === currentIndex) return current === "acceptedComplete" ? "待确认" as const : "进行中" as const;
+    if (index === currentIndex) return stageId === "projectEnded" ? "已完成" as const : "进行中" as const;
     return "待开始" as const;
   };
   return [
-    {
-      id: "draft",
-      stageId: "draft" as const,
-      stageNo: 0,
-      name: "草稿",
-      lane: "需求方" as const,
-      owner: owners.requester,
-      status: statusFor("draft"),
-      deliverable: "背景、目标、价值、重要级别和附件",
-      completion: "需求方发起需求评审",
-      description: "需求方先形成需求草稿，补齐背景、目标、业务价值、优先级和附件。",
-      configurable: true
-    },
     {
       id: "demandReview",
       stageId: "demandReview" as const,
@@ -1334,10 +1296,10 @@ function workflowNodes(
       name: "需求评审",
       lane: "产品经理" as const,
       owner: owners.product,
-      status: statusFor("demandReview"),
-      deliverable: "解决方案、资源投入测算、AI 评分",
+      status: statusFor("demandReview", demandOrder, demandCurrent),
+      deliverable: "技术路线、实现方式判断",
       completion: "产品经理打回或发起方案确认",
-      description: "产品经理评审需求、提出解决方案并用 AI 从业务价值、紧急程度、可行性辅助打分。",
+      description: "产品经理评审需求是否可做，判断技术路线以及内部实现、外部供应商或合作实现方式。",
       configurable: true
     },
     {
@@ -1347,83 +1309,107 @@ function workflowNodes(
       name: "方案确认",
       lane: "需求方" as const,
       owner: owners.reviewer ?? owners.requester,
-      status: statusFor("solutionConfirm"),
-      deliverable: "方案确认意见、是否发起项目申请",
-      completion: "需求方放弃需求或发起项目申请",
-      description: "需求方确认产品方案、资源投入、验收边界和业务收益。",
+      status: statusFor("solutionConfirm", demandOrder, demandCurrent),
+      deliverable: "技术路线确认意见、实现方式确认",
+      completion: "需求线结束，等待产品经理预创建项目",
+      description: "需求方确认技术路线和实现方式；需求线到此结束，后续由产品经理预创建并关联项目，资源与预算进入项目阶段处理。",
+      configurable: false
+    },
+    {
+      id: "projectPrepare",
+      stageId: "projectPrepare" as const,
+      stageNo: 1,
+      name: "项目准备",
+      lane: "产品经理" as const,
+      owner: owners.product,
+      status: statusFor("projectPrepare", projectOrder, projectCurrent),
+      deliverable: "关联需求、内部人天、外部供应商需求、供应商人天",
+      completion: "产品经理完成项目预创建",
+      description: "产品经理把已确认方案的需求预创建为项目，填写内部资源需求、是否外采、外采人天和供应商角色。",
       configurable: true
     },
     {
       id: "projectStart",
       stageId: "projectStart" as const,
-      stageNo: 3,
+      stageNo: 2,
       name: "项目启动",
       lane: "项目经理" as const,
       owner: owners.pm,
-      status: statusFor("projectStart"),
-      deliverable: "资源判断、启动决定、启动留言",
-      completion: "唯一项目经理点击项目启动",
-      description: "唯一项目经理判断当前资源池是否合适；资源不合适可退回方案确认，不操作则停留本阶段。",
+      status: statusFor("projectStart", projectOrder, projectCurrent),
+      deliverable: "已分配开发、已分配外部供应商、资源启动窗口",
+      completion: "项目经理填入资源后进入项目启动",
+      description: "项目经理必须把内部开发和外部供应商资源填入后，才能确认进入项目启动。",
       configurable: true
     },
     {
       id: "projectExecution",
       stageId: "projectExecution" as const,
-      stageNo: 4,
+      stageNo: 3,
       name: "项目进行",
       lane: "开发" as const,
       owner: owners.developers,
-      status: statusFor("projectExecution"),
+      status: statusFor("projectExecution", projectOrder, projectCurrent),
       deliverable: "开发指派、子任务、估时、工时、进度",
-      completion: "任务全部完成后项目经理点击项目验收",
-      description: "项目经理指派开发；开发拆分任务、估时排期、登记工时、汇报进度并完成任务。",
+      completion: "到 DDL 或产品经理确认项目完成",
+      description: "产品经理填写项目启动结束时间后进入；开发和外部供应商拆分任务、估时排期、登记工时、汇报进度并完成任务。",
       configurable: true
     },
     {
-      id: "projectAcceptance",
-      stageId: "projectAcceptance" as const,
-      stageNo: 5,
-      name: "项目验收",
-      lane: "产品经理" as const,
-      owner: owners.product,
-      status: statusFor("projectAcceptance"),
-      deliverable: "验收结论、退回意见或验收完成",
-      completion: "产品经理点击验收完成",
-      description: "产品经理验收项目交付，不通过则退回项目进行继续整改。",
-      configurable: true
-    },
-    {
-      id: "acceptedComplete",
-      stageId: "acceptedComplete" as const,
-      stageNo: 6,
-      name: "验收完成",
+      id: "projectComplete",
+      stageId: "projectComplete" as const,
+      stageNo: 4,
+      name: "项目完成",
       lane: "需求方" as const,
-      owner: owners.requester,
-      status: statusFor("acceptedComplete"),
-      deliverable: "1-5 分评价、关闭记录",
-      completion: "需求方提交评分后流程关闭",
-      description: "需求方对验收完成的系统提交评分和评价，评分后流程只读查看。",
+      owner: owners.reviewer ?? owners.requester,
+      status: statusFor("projectComplete", projectOrder, projectCurrent),
+      deliverable: "项目完成说明、验收材料、需求方评分入口",
+      completion: "需求方完成验收评分",
+      description: "项目到 DDL 或产品经理点击后进入项目完成，等待需求方验收并打分。",
       configurable: true
+    },
+    {
+      id: "projectEnded",
+      stageId: "projectEnded" as const,
+      stageNo: 5,
+      name: "项目结束",
+      lane: "需求方" as const,
+      owner: owners.pm,
+      status: statusFor("projectEnded", projectOrder, projectCurrent),
+      deliverable: "项目关闭记录、评分归档",
+      completion: "需求方完成评价后关闭",
+      description: "需求方评分完成后，项目线关闭并归档。",
+      configurable: false
     }
   ];
 }
 
+function demandCurrentForWorkflow(current: WorkflowStageId): WorkflowStageId {
+  if (current === "projectPrepare" || current === "projectStart" || current === "projectExecution" || current === "projectComplete" || current === "projectEnded") return "solutionConfirm";
+  return current;
+}
+
+function projectCurrentForWorkflow(current: WorkflowStageId): WorkflowStageId | undefined {
+  if (current === "projectPrepare" || current === "projectStart" || current === "projectExecution" || current === "projectComplete" || current === "projectEnded") return current;
+  return undefined;
+}
+
 export const demandProjectFlows: DemandProjectFlow[] = [
   {
-    id: "FLOW-STAGE-0",
-    demandId: "REQ-STAGE-0",
-    projectId: "待项目申请",
+    id: "FLOW-REVIEW-001",
+    demandId: "REQ-REVIEW-001",
+    projectId: "待项目关联",
     title: "销售样品申请移动化工作流",
     mode: "内部实现",
-    currentNodeId: "draft",
+    currentNodeId: "demandReview",
+    currentDemandNodeId: "demandReview",
     resourceRequest: {
       requester: "沈岚",
-      need: "草稿阶段暂未形成资源申请",
+      need: "需求已创建并进入产品经理评审，暂未形成项目资源申请",
       days: 0,
-      window: "待需求方发起需求评审",
-      status: "草稿"
+      window: "待产品经理完成需求评审",
+      status: "需求评审"
     },
-    nodes: workflowNodes("draft", { requester: "沈岚", product: "陈彦", pm: "李书航", developers: "待指派", reviewer: "周宁" }),
+    nodes: workflowNodes("demandReview", { requester: "沈岚", product: "陈彦", pm: "李书航", developers: "待指派", reviewer: "周宁" }),
     assignments: []
   },
   {
@@ -1433,6 +1419,8 @@ export const demandProjectFlows: DemandProjectFlow[] = [
     title: "SAP 财务供应链升级工作流",
     mode: "合作实现",
     currentNodeId: "projectExecution",
+    currentDemandNodeId: "solutionConfirm",
+    currentProjectNodeId: "projectExecution",
     resourceRequest: {
       requester: "陈彦",
       need: "ABAP 开发 2 人、接口开发 2 人、测试 2 人",
@@ -1452,27 +1440,27 @@ export const demandProjectFlows: DemandProjectFlow[] = [
     projectId: "PRJ-124",
     title: "CRM 合规拜访改造工作流",
     mode: "合作实现",
-    currentNodeId: "demandReview",
+    currentNodeId: "projectPrepare",
+    currentDemandNodeId: "solutionConfirm",
+    currentProjectNodeId: "projectPrepare",
     resourceRequest: {
       requester: "陈彦",
       need: "CRM 供应商技术评估、移动端开发 1 人、接口开发 1 人",
       days: 6,
       window: "2026-05-25 至 2026-07-05",
-      status: "方案确认中"
+      status: "项目准备"
     },
-    nodes: workflowNodes("demandReview", { requester: "周宁", product: "陈彦", pm: "李书航", developers: "姜曼 / 陆川", reviewer: "周宁" }),
-    assignments: [
-      { id: "ASSIGN-CRM-01", role: "前端开发", person: "姜曼", dateRange: "2026-05-25 至 2026-06-04", hours: 28, workload: "本周 36/40h", conflict: "可承接", sourceCalendarDates: ["2026-05-25", "2026-05-26", "2026-06-04"] },
-      { id: "ASSIGN-CRM-02", role: "全栈开发", person: "陆川", dateRange: "2026-05-25 至 2026-06-02", hours: 12, workload: "本周 37/40h", conflict: "接近满负荷", sourceCalendarDates: ["2026-05-25"] }
-    ]
+    nodes: workflowNodes("projectPrepare", { requester: "周宁", product: "陈彦", pm: "李书航", developers: "待分配", reviewer: "周宁" }),
+    assignments: []
   },
   {
     id: "FLOW-STAGE-2",
     demandId: "REQ-STAGE-2",
-    projectId: "待项目申请",
+    projectId: "待项目关联",
     title: "质量偏差 CAPA 跟踪看板工作流",
     mode: "内部实现",
     currentNodeId: "solutionConfirm",
+    currentDemandNodeId: "solutionConfirm",
     resourceRequest: {
       requester: "陈彦",
       need: "全栈开发 1 人、测试 1 人，预计 28 人天",
@@ -1490,6 +1478,8 @@ export const demandProjectFlows: DemandProjectFlow[] = [
     title: "业务指标自助报表门户工作流",
     mode: "内部实现",
     currentNodeId: "projectExecution",
+    currentDemandNodeId: "solutionConfirm",
+    currentProjectNodeId: "projectExecution",
     resourceRequest: {
       requester: "陈彦",
       need: "内部全栈开发 1 人、前端开发 1 人、接口开发 1 人",
@@ -1505,18 +1495,43 @@ export const demandProjectFlows: DemandProjectFlow[] = [
     ]
   },
   {
+    id: "FLOW-GPU-019",
+    demandId: "REQ-2026-019",
+    projectId: "PRJ-131",
+    title: "算力中心 GPU 集群一期工作流",
+    mode: "合作实现",
+    currentNodeId: "projectExecution",
+    currentDemandNodeId: "solutionConfirm",
+    currentProjectNodeId: "projectExecution",
+    resourceRequest: {
+      requester: "陈彦",
+      need: "基础架构 2 人、平台开发 1 人、网络工程师 1 人、供应商实施 2 人",
+      days: 98,
+      window: "2026-05-18 至 2026-06-10",
+      status: "项目进行"
+    },
+    nodes: workflowNodes("projectExecution", { requester: "高翔", product: "陈彦", pm: "李书航", developers: "韩冰 / 罗清 / 云算科技", reviewer: "周宁" }),
+    assignments: [
+      { id: "ASSIGN-GPU-01", role: "平台开发", person: "韩冰", dateRange: "2026-05-18 至 2026-06-02", hours: 24, workload: "本周 42/40h", conflict: "超负荷", sourceCalendarDates: ["2026-05-18", "2026-05-25", "2026-05-28"] },
+      { id: "ASSIGN-GPU-02", role: "AI 平台工程师", person: "罗清", dateRange: "2026-05-18 至 2026-06-06", hours: 18, workload: "本周 38/40h", conflict: "接近满负荷", sourceCalendarDates: ["2026-05-20", "2026-05-28"] },
+      { id: "ASSIGN-GPU-03", role: "外部硬件实施", person: "云算科技", dateRange: "2026-05-18 至 2026-06-10", hours: 36, workload: "供应商排期", conflict: "等待第二批设备", sourceCalendarDates: ["2026-05-18", "2026-05-29"] }
+    ]
+  },
+  {
     id: "FLOW-AV-014",
     demandId: "REQ-2026-014",
     projectId: "PRJ-097",
     title: "培训中心音视频设备更新工作流",
     mode: "外部供应商",
     currentNodeId: "projectStart",
+    currentDemandNodeId: "solutionConfirm",
+    currentProjectNodeId: "projectStart",
     resourceRequest: {
       requester: "陈彦",
       need: "外部音视频集成商踏勘与报价",
       days: 8,
       window: "2026-05-29 至 2026-07-20",
-      status: "待项目经理启动"
+      status: "项目启动"
     },
     nodes: workflowNodes("projectStart", { requester: "周宁", product: "陈彦", pm: "李书航", developers: "远见智能实施", reviewer: "周宁" }),
     assignments: [
@@ -1530,15 +1545,17 @@ export const demandProjectFlows: DemandProjectFlow[] = [
     projectId: "PRJ-119",
     title: "GxP 电子文档与验证平台工作流",
     mode: "合作实现",
-    currentNodeId: "projectAcceptance",
+    currentNodeId: "projectComplete",
+    currentDemandNodeId: "solutionConfirm",
+    currentProjectNodeId: "projectComplete",
     resourceRequest: {
       requester: "陈彦",
       need: "全栈开发 1 人、验证工程师 1 人、测试 1 人",
       days: 72,
       window: "2026-05-20 至 2026-05-29",
-      status: "项目验收"
+      status: "项目完成"
     },
-    nodes: workflowNodes("projectAcceptance", { requester: "沈岚", product: "陈彦", pm: "李书航", developers: "陆川 / 姜曼", reviewer: "周宁" }),
+    nodes: workflowNodes("projectComplete", { requester: "沈岚", product: "陈彦", pm: "李书航", developers: "陆川 / 姜曼", reviewer: "周宁" }),
     assignments: [
       { id: "ASSIGN-GXP-01", role: "全栈开发", person: "陆川", dateRange: "2026-05-20 至 2026-05-29", hours: 12, workload: "验收缺陷处理", conflict: "可承接", sourceCalendarDates: ["2026-05-23", "2026-05-25"] },
       { id: "ASSIGN-GXP-02", role: "前端开发", person: "姜曼", dateRange: "2026-05-20 至 2026-05-31", hours: 8, workload: "验收报表补充", conflict: "可承接", sourceCalendarDates: ["2026-05-25"] }
@@ -1550,15 +1567,17 @@ export const demandProjectFlows: DemandProjectFlow[] = [
     projectId: "PRJ-108",
     title: "LIMS 实验室系统升级工作流",
     mode: "合作实现",
-    currentNodeId: "acceptedComplete",
+    currentNodeId: "projectEnded",
+    currentDemandNodeId: "solutionConfirm",
+    currentProjectNodeId: "projectEnded",
     resourceRequest: {
       requester: "陈彦",
       need: "供应商实施 3 人、内部验证测试 1 人",
       days: 36,
       window: "2026-04-28 至 2026-05-12",
-      status: "已关闭"
+      status: "项目结束"
     },
-    nodes: workflowNodes("acceptedComplete", { requester: "沈岚", product: "陈彦", pm: "李书航", developers: "供应商实施 / 陆川", reviewer: "周宁" }),
+    nodes: workflowNodes("projectEnded", { requester: "沈岚", product: "陈彦", pm: "李书航", developers: "供应商实施 / 陆川", reviewer: "周宁" }),
     assignments: [
       { id: "ASSIGN-LIMS-01", role: "外部实施", person: "供应商实施", dateRange: "2026-04-28 至 2026-05-12", hours: 36, workload: "已完成", conflict: "无冲突", sourceCalendarDates: ["2026-05-03", "2026-05-05"] },
       { id: "ASSIGN-LIMS-02", role: "全栈开发", person: "陆川", dateRange: "2026-05-05 至 2026-05-08", hours: 11, workload: "已完成", conflict: "无冲突", sourceCalendarDates: ["2026-05-08"] }
@@ -1613,7 +1632,7 @@ export const projectInvestmentBreakdowns: ProjectInvestmentBreakdown[] = [
     supplierCost: 860000,
     supplierRole: "LIMS 供应商负责产品升级和仪器接口适配",
     businessRole: "业务部门负责实验室场景验证",
-    status: "验收完成"
+    status: "项目结束"
   },
   {
     project: "算力中心 GPU 集群一期",
@@ -1801,11 +1820,11 @@ export const notificationCatalog: NotificationCatalogItem[] = [
   { id: "demand.accepted", domain: "需求", event: "需求评审承接", description: "产品经理承接需求并进入需求评审和方案设计。", priority: "中", channels: ["站内信"], configurable: true },
   { id: "demand.scopeConfirm", domain: "需求", event: "方案确认待处理", description: "产品经理提交范围、实现方式、资源测算和验收标准，等待需求方确认方案。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
   { id: "demand.priority", domain: "需求", event: "需求优先级调整", description: "部门负责人调整 P0/P1/P2/P3 优先级。", priority: "中", channels: ["站内信", "企业微信"], configurable: true },
-  { id: "demand.acceptance", domain: "需求", event: "需求进入验收", description: "需求进入项目验收阶段，需要需求方确认评分。", priority: "高", channels: ["站内信", "企业微信"], configurable: true },
+  { id: "demand.acceptance", domain: "需求", event: "需求进入验收", description: "需求进入项目完成阶段，需要需求方确认评分。", priority: "高", channels: ["站内信", "企业微信"], configurable: true },
   { id: "delivery.submitted", domain: "项目", event: "项目申请提交", description: "产品经理提交项目申请给项目经理或 IT负责人。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
   { id: "delivery.returned", domain: "项目", event: "项目申请退回", description: "项目经理退回项目申请，要求产品经理补充方案、资源或供应商信息。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
   { id: "delivery.accepted", domain: "项目", event: "项目启动", description: "项目经理判断资源可用后启动项目，进入项目进行阶段。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
-  { id: "project.stage", domain: "项目", event: "项目阶段变更", description: "项目在项目启动、项目进行、项目验收、验收完成之间发生阶段变化。", priority: "中", channels: ["站内信"], configurable: true },
+  { id: "project.stage", domain: "项目", event: "项目阶段变更", description: "项目在项目启动、项目进行、项目完成、项目结束之间发生阶段变化。", priority: "中", channels: ["站内信"], configurable: true },
   { id: "project.record", domain: "项目", event: "项目记录修改", description: "项目经理维护里程碑、预算备注、风险原因或应对措施。", priority: "中", channels: ["站内信"], configurable: true },
   { id: "project.progress", domain: "项目", event: "项目阶段推进", description: "项目经理推进项目阶段并同步协作链路。", priority: "中", channels: ["站内信"], configurable: true },
   { id: "project.riskResponse", domain: "项目", event: "风险应对更新", description: "项目经理更新风险应对，高风险事项触达 IT负责人和高管。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
@@ -1819,7 +1838,7 @@ export const notificationCatalog: NotificationCatalogItem[] = [
   { id: "resource.approved", domain: "资源", event: "资源排期确认", description: "项目经理确认资源排期并通知产品经理和被安排人员。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
   { id: "resource.overload", domain: "资源", event: "人员超负荷", description: "人员排期超过容量或连续高负载。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
   { id: "budget.threshold", domain: "预算", event: "预算超阈值", description: "项目预算使用超过预警线或外采金额异常。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
-  { id: "acceptance.started", domain: "验收", event: "验收发起", description: "产品经理完成项目验收后，需求方需要确认结果并评分。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
+  { id: "acceptance.started", domain: "验收", event: "验收发起", description: "产品经理完成项目完成后，需求方需要确认结果并评分。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
   { id: "acceptance.score", domain: "验收", event: "验收评分提交", description: "需求方完成交付评分和评价。", priority: "中", channels: ["站内信"], configurable: true },
   { id: "acceptance.lowScore", domain: "验收", event: "评分异常", description: "验收评分低于阈值，需要复盘或整改。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
   { id: "permission.changed", domain: "权限", event: "权限变更", description: "角色、用户或数据范围权限发生变化。", priority: "中", channels: ["站内信"], configurable: true },
@@ -1853,7 +1872,7 @@ export const roleNotificationSubscriptions: RoleNotificationSubscription[] = [
     defaultOn: ["work.assigned", "demand.new", "demand.accepted", "demand.scopeConfirm", "demand.acceptance", "delivery.returned", "delivery.accepted", "project.stage", "resource.approved", "acceptance.score"],
     optional: ["demand.priority", "project.highRisk", "delivery.submitted", "resource.submitted", "integration.mcpError"],
     locked: ["work.assigned", "demand.acceptance", "delivery.returned"],
-    note: "产品经理关注需求评审、方案确认、资源申请、实现进度和项目验收。"
+    note: "产品经理关注需求评审、方案确认、资源申请、实现进度和项目完成。"
   },
   {
     roleId: "requester",
@@ -1879,16 +1898,17 @@ export const roleNotificationSubscriptions: RoleNotificationSubscription[] = [
 ];
 
 export const projectRules: ProjectRule[] = [
-  { stage: "项目启动", deliverable: "项目申请、方案确认、资源测算、验收标准", owner: "项目经理", acceptance: "项目经理确认启动或退回方案确认" },
-  { stage: "项目进行", deliverable: "任务拆解、工时记录、接口清单、供应商交付记录", owner: "项目经理 / 开发", acceptance: "关键任务按周更新状态" },
-  { stage: "项目验收", deliverable: "验收邀请、评分、上线检查表、验证包", owner: "产品经理", acceptance: "产品经理确认验收完成或退回项目进行" },
-  { stage: "验收完成", deliverable: "需求方 1-5 分评分、评价、复盘记录", owner: "需求方", acceptance: "需求方提交评分后流程关闭" }
+  { stage: "项目准备", deliverable: "关联需求、内部人天、外部供应商需求、外采人天", owner: "产品经理", acceptance: "产品经理点击项目预创建" },
+  { stage: "项目启动", deliverable: "已分配开发、供应商资源、启动窗口", owner: "项目经理", acceptance: "项目经理填入资源后确认启动" },
+  { stage: "项目进行", deliverable: "任务拆解、工时记录、接口清单、供应商交付记录", owner: "开发 / 外部供应商", acceptance: "开发和供应商按周更新状态" },
+  { stage: "项目完成", deliverable: "项目完成说明、验收材料、需求方评分入口", owner: "产品经理 / 需求方", acceptance: "DDL 到期或产品经理确认后等待评分" },
+  { stage: "项目结束", deliverable: "需求方 1-5 分评分、评价、复盘记录", owner: "需求方", acceptance: "需求方提交评分后流程关闭" }
 ];
 
 export const projectDependencies: ProjectDependency[] = [
   { project: "SAP S/4HANA 财务供应链一体化", relation: "依赖", target: "主数据治理专项", impact: "影响物料、供应商和成本中心迁移准确性", status: "跟进中" },
   { project: "算力中心 GPU 集群一期", relation: "阻塞", target: "GPU 设备到货与机房电力扩容", impact: "影响集群压测和正式验收", status: "高风险" },
-  { project: "LIMS 实验室系统升级", relation: "父子项目", target: "ELN 电子实验记录二期", impact: "LIMS 样本和结果数据将作为 ELN 二期集成基础", status: "验收完成" },
+  { project: "LIMS 实验室系统升级", relation: "父子项目", target: "ELN 电子实验记录二期", impact: "LIMS 样本和结果数据将作为 ELN 二期集成基础", status: "项目结束" },
   { project: "业务指标自助报表门户", relation: "依赖", target: "内部数据服务与权限中心", impact: "影响指标权限过滤、审计日志和报表导出准确性", status: "跟进中" },
   { project: "培训中心音视频设备更新", relation: "依赖", target: "培训中心场地空档期", impact: "影响供应商进场、布线施工和录播联动验收", status: "待确认" }
 ];
@@ -1906,7 +1926,7 @@ export const botMessages: BotMessage[] = [
   { speaker: "user", text: "把 TASK-901 更新为测试中" },
   { speaker: "bot", text: "已识别任务：SAP 主数据迁移校验。状态更新申请已记录，等待接口联调确认。" },
   { speaker: "user", text: "提交一个 GxP 培训记录查询优化需求" },
-  { speaker: "bot", text: "已生成简易需求草稿：GxP 培训记录查询优化，优先级 P2，待业务方补充目标和附件。" }
+  { speaker: "bot", text: "已创建简易需求：GxP 培训记录查询优化，优先级 P2，已进入需求评审。" }
 ];
 
 export const roleAccessPreviews: RoleAccessPreview[] = [
@@ -1918,26 +1938,26 @@ export const roleAccessPreviews: RoleAccessPreview[] = [
   },
   {
     roleId: "executive",
-    visibleModules: ["工作台", "项目管理", "资源与预算", "绩效与报表"],
-    actions: ["查看全局项目", "查看预算投入", "查看交付评分", "导出统计报告"],
-    dataScope: "全公司 IT 项目、预算、资源和绩效汇总；不推进流程"
+    visibleModules: ["工作台"],
+    actions: ["查看管理层工作台"],
+    dataScope: "仅查看管理层工作台汇总；不进入业务操作页面，不推进流程"
   },
   {
     roleId: "pm",
     visibleModules: ["工作台", "项目管理", "任务与工时", "资源与预算", "绩效与报表"],
-    actions: ["项目启动", "退回方案确认", "指派开发", "提交项目验收", "管理风险与预算"],
+    actions: ["项目启动", "方案确认", "指派开发", "提交项目完成", "管理风险与预算"],
     dataScope: "唯一项目经理视角：查看全部项目申请、进行中项目、任务完成情况、资源预算和供应商风险"
   },
   {
     roleId: "product",
     visibleModules: ["工作台", "需求管理", "项目管理", "绩效与报表"],
-    actions: ["需求评审", "打回需求", "发起方案确认", "项目验收", "退回项目进行"],
+    actions: ["需求评审", "打回需求", "发起方案确认", "项目完成", "退回项目进行"],
     dataScope: "本人承接或参与分析的需求、关联项目和产品绩效"
   },
   {
     roleId: "requester",
     visibleModules: ["工作台", "需求管理"],
-    actions: ["提交需求", "发起需求评审", "确认方案", "发起项目申请", "提交验收评分"],
+    actions: ["提交需求", "确认方案", "查看关联项目和验收结果"],
     dataScope: "业务部门本人提交或需要本人确认、评分的需求"
   },
   {

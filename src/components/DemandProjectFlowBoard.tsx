@@ -1,54 +1,73 @@
-import { ChevronDown, PlayCircle, Settings2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import type { DemandProjectFlow, FlowActionId, FlowActionLog, FlowBoardAction, FlowNode, FlowNodeStatus, RoleId } from "../types";
+import { ChevronDown, ChevronLeft, ChevronRight, PlayCircle } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import type { DemandProjectFlow, FlowActionId, FlowActionLog, FlowBoardAction, FlowNode, RoleId, Task } from "../types";
 import { Modal, SectionHeader, StatusTag, toneForStatus } from "./ui";
 
-const statusOptions: FlowNodeStatus[] = ["待开始", "进行中", "待确认", "已完成", "风险"];
+const demandStageIds = ["demandReview", "solutionConfirm"];
+
+type FlowRoleSummary = {
+  product?: string;
+  pm?: string;
+  developers: FlowDeveloperSummary[];
+};
+
+type FlowDeveloperSummary = {
+  name: string;
+  actual: number;
+  estimate: number;
+};
 
 export function DemandProjectFlowBoard({
   flow,
-  canConfigure = false,
   actions = [],
   actionTitle = "流程推进操作",
   logs = [],
-  activeRole = "executive",
-  onNodeChange,
-  onApplyAction
+  tasks = [],
+  onApplyAction,
+  onRequestAction,
+  stageExtras
 }: {
   flow: DemandProjectFlow;
   canConfigure?: boolean;
   actions?: FlowBoardAction[];
   actionTitle?: string;
   logs?: FlowActionLog[];
+  tasks?: Task[];
   activeRole?: RoleId;
   onNodeChange?: (flowId: string, nodeId: string, patch: Partial<FlowNode>) => void;
   onApplyAction?: (flowId: string, actionId: FlowActionId, note?: string) => void;
+  onRequestAction?: (action: FlowBoardAction) => boolean;
+  stageExtras?: Record<string, { label: string; value: string }[]>;
 }) {
-  const [editing, setEditing] = useState<FlowNode | null>(null);
-  const [draft, setDraft] = useState<FlowNode | null>(null);
   const [pendingAction, setPendingAction] = useState<FlowBoardAction | null>(null);
   const [actionNote, setActionNote] = useState("");
   const [actionsOpen, setActionsOpen] = useState(false);
+  const demandNodes = useMemo(() => flow.nodes.filter((node) => node.stageId && demandStageIds.includes(node.stageId)), [flow.nodes]);
+  const projectNodes = useMemo(() => flow.nodes.filter((node) => node.stageId && !demandStageIds.includes(node.stageId)), [flow.nodes]);
+  const roleSummary = useMemo(() => buildRoleSummary(flow, tasks), [flow, tasks]);
+  const currentDemandNodeId = flow.currentDemandNodeId ?? inferDemandCurrent(flow);
+  const currentProjectNodeId = flow.currentProjectNodeId ?? inferProjectCurrent(flow);
+  const activeTrack = currentProjectNodeId ? "project" : "demand";
+  const [selectedDemandNodeId, setSelectedDemandNodeId] = useState(currentDemandNodeId);
+  const [selectedProjectNodeId, setSelectedProjectNodeId] = useState(currentProjectNodeId ?? projectNodes[0]?.id ?? "");
+  const [openTracks, setOpenTracks] = useState<{ demand: boolean; project: boolean }>(() => ({
+    demand: activeTrack === "demand",
+    project: activeTrack === "project"
+  }));
   const enabledActions = actions.filter((action) => !action.disabled);
   const groupedActions = groupActions(actions);
-  const configurableCount = flow.nodes.filter((node) => canConfigureNode(activeRole, node, canConfigure)).length;
 
   useEffect(() => {
-    setDraft(editing ? { ...editing } : null);
-  }, [editing]);
+    setSelectedDemandNodeId(currentDemandNodeId);
+    setSelectedProjectNodeId(currentProjectNodeId ?? projectNodes[0]?.id ?? "");
+  }, [currentDemandNodeId, currentProjectNodeId, projectNodes]);
 
-  function saveDraft() {
-    if (!draft || !editing || !onNodeChange) return;
-    onNodeChange(flow.id, editing.id, {
-      name: draft.name,
-      lane: draft.lane,
-      owner: draft.owner,
-      status: draft.status,
-      deliverable: draft.deliverable,
-      description: draft.description
+  useEffect(() => {
+    setOpenTracks({
+      demand: activeTrack === "demand",
+      project: activeTrack === "project"
     });
-    setEditing(null);
-  }
+  }, [activeTrack, flow.id]);
 
   function submitAction() {
     if (!pendingAction) return;
@@ -62,14 +81,10 @@ export function DemandProjectFlowBoard({
       <SectionHeader
         eyebrow={`${flow.id} · ${flow.mode}`}
         title={flow.title}
-        action={<StatusTag tone={configurableCount > 0 ? "blue" : "gray"}>{configurableCount > 0 ? `可设置 ${configurableCount} 个节点` : "只读流程"}</StatusTag>}
       />
-
-      <div className="flow-summary">
-        <div><span>关联需求</span><strong>{flow.demandId}</strong></div>
-        <div><span>关联项目</span><strong>{flow.projectId}</strong></div>
-        <div><span>当前节点</span><strong>{flow.nodes.find((node) => node.id === flow.currentNodeId)?.name ?? flow.currentNodeId}</strong></div>
-        <div><span>资源状态</span><strong>{flow.resourceRequest.status}</strong></div>
+      <div className="flow-owner-line">
+        <span>产品经理 <strong>{roleSummary.product ?? "未指定"}</strong></span>
+        <span>项目经理 <strong>{roleSummary.pm ?? "未指定"}</strong></span>
       </div>
 
       {actions.length > 0 ? (
@@ -97,6 +112,7 @@ export function DemandProjectFlowBoard({
                         key={action.id}
                         type="button"
                         onClick={() => {
+                          if (onRequestAction?.(action)) return;
                           setPendingAction(action);
                           setActionNote("");
                         }}
@@ -117,55 +133,31 @@ export function DemandProjectFlowBoard({
         </div>
       ) : null}
 
-      <div className="flow-board-scroller">
-        <div className="flow-stage-board" style={{ gridTemplateColumns: `repeat(${flow.nodes.length}, minmax(190px, 1fr))` }}>
-          {flow.nodes.map((node, index) => (
-            <div className={`flow-stage-head${node.id === flow.currentNodeId ? " current" : ""}`} key={node.id}>
-              <span>阶段 {node.stageNo ?? index}</span>
-              <strong>{node.name}</strong>
-            </div>
-          ))}
-          {flow.nodes.map((node) => (
-            <FlowStageCard
-              key={node.id}
-              node={node}
-              current={node.id === flow.currentNodeId}
-              canConfigure={canConfigure}
-              activeRole={activeRole}
-              onEdit={setEditing}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div className="flow-resource-panel">
-        <div className="flow-resource-request">
-          <span className="eyebrow">DELIVERY REQUEST</span>
-          <strong>项目申请与资源测算</strong>
-          <p>{flow.resourceRequest.need}</p>
-          <div className="compact-grid">
-            <span>申请人：{flow.resourceRequest.requester}</span>
-            <span>人天：{flow.resourceRequest.days} 天</span>
-            <span>窗口：{flow.resourceRequest.window}</span>
-            <span>状态：{flow.resourceRequest.status}</span>
-          </div>
-        </div>
-        <div className="assignment-grid">
-          {flow.assignments.map((assignment) => (
-            <article className="assignment-card" key={assignment.id}>
-              <div>
-                <strong>{assignment.person}</strong>
-                <StatusTag tone={assignment.conflict.includes("满负荷") || assignment.conflict.includes("等待") ? "orange" : "green"}>{assignment.conflict}</StatusTag>
-              </div>
-              <p>{assignment.role} · {assignment.dateRange}</p>
-              <div className="compact-grid">
-                <span>工时：{assignment.hours}h</span>
-                <span>负载：{assignment.workload}</span>
-                <span>日历：{assignment.sourceCalendarDates.join(" / ")}</span>
-              </div>
-            </article>
-          ))}
-        </div>
+      <div className="flow-stage-viewer dual-track-viewer">
+        <FlowTrack
+          title="需求线"
+          description="需求线到方案确认结束，后续等待产品经理预创建并关联项目。"
+          nodes={demandNodes}
+          currentNodeId={currentDemandNodeId}
+          selectedNodeId={selectedDemandNodeId}
+          onSelect={setSelectedDemandNodeId}
+          roleSummary={roleSummary}
+          collapsed={!openTracks.demand}
+          onToggle={() => setOpenTracks((current) => ({ ...current, demand: !current.demand }))}
+        />
+        <FlowTrack
+          title="阶段"
+          description={currentProjectNodeId ? "项目已关联需求，按项目阶段独立推进。" : "产品经理尚未把该需求预创建为项目。"}
+          nodes={projectNodes}
+          currentNodeId={currentProjectNodeId}
+          selectedNodeId={selectedProjectNodeId}
+          onSelect={setSelectedProjectNodeId}
+          roleSummary={roleSummary}
+          stageExtras={stageExtras}
+          disabled={!currentProjectNodeId}
+          collapsed={!openTracks.project}
+          onToggle={() => setOpenTracks((current) => ({ ...current, project: !current.project }))}
+        />
       </div>
 
       {logs.length > 0 ? (
@@ -180,24 +172,6 @@ export function DemandProjectFlowBoard({
           </ul>
         </div>
       ) : null}
-
-      <Modal title="节点设置" open={Boolean(editing && draft)} onClose={() => setEditing(null)}>
-        {draft ? (
-          <>
-            <div className="form-grid">
-              <label>节点名称<input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
-              <label>负责人<input value={draft.owner} onChange={(event) => setDraft({ ...draft, owner: event.target.value })} /></label>
-              <label>节点状态<select value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value as FlowNodeStatus })}>{statusOptions.map((status) => <option key={status}>{status}</option>)}</select></label>
-              <label className="wide">交付物<input value={draft.deliverable} onChange={(event) => setDraft({ ...draft, deliverable: event.target.value })} /></label>
-              <label className="wide">说明<textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
-            </div>
-            <div className="split-actions">
-              <button className="btn secondary" onClick={() => setEditing(null)}>取消</button>
-              <button className="btn" onClick={saveDraft}>保存节点设置</button>
-            </div>
-          </>
-        ) : null}
-      </Modal>
 
       <Modal title={pendingAction?.label ?? "执行业务动作"} open={Boolean(pendingAction)} onClose={() => setPendingAction(null)}>
         {pendingAction ? (
@@ -242,47 +216,196 @@ function groupActions(actions: FlowBoardAction[]) {
   return stages.map((stage) => ({ stage, actions: actions.filter((action) => action.stage === stage) }));
 }
 
+function FlowTrack({
+  title,
+  description,
+  nodes,
+  currentNodeId,
+  selectedNodeId,
+  onSelect,
+  roleSummary,
+  stageExtras,
+  disabled = false,
+  collapsed = false,
+  onToggle
+}: {
+  title: string;
+  description: string;
+  nodes: FlowNode[];
+  currentNodeId?: string;
+  selectedNodeId: string;
+  onSelect: (nodeId: string) => void;
+  roleSummary: FlowRoleSummary;
+  stageExtras?: Record<string, { label: string; value: string }[]>;
+  disabled?: boolean;
+  collapsed?: boolean;
+  onToggle?: () => void;
+}) {
+  const selectedIndex = Math.max(0, nodes.findIndex((node) => node.id === selectedNodeId));
+  const selectedNode = nodes[selectedIndex] ?? nodes[0];
+  if (!selectedNode) {
+    return (
+      <section className="flow-track-section disabled">
+        <div className="flow-track-title">
+          <button className="flow-track-toggle" type="button" onClick={onToggle}>
+            <strong>{title}</strong>
+            <ChevronDown size={16} />
+          </button>
+          <span>{description}</span>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className={`${disabled ? "flow-track-section disabled" : "flow-track-section"}${collapsed ? " collapsed" : ""}`}>
+      <div className="flow-track-title">
+        <button className="flow-track-toggle" type="button" onClick={onToggle} aria-expanded={!collapsed}>
+          <strong>{title}</strong>
+          <StatusTag tone={selectedNode.id === currentNodeId ? "blue" : "gray"}>{selectedNode.name}</StatusTag>
+          <ChevronDown size={16} />
+        </button>
+        <span>{description}</span>
+      </div>
+      {collapsed ? null : (
+      <>
+      <div className="flow-stage-viewer-toolbar">
+        <button
+          className="icon-button"
+          type="button"
+          onClick={() => onSelect(nodes[Math.max(0, selectedIndex - 1)].id)}
+          disabled={selectedIndex === 0 || disabled}
+          aria-label={`查看上一${title}阶段`}
+        >
+          <ChevronLeft size={18} />
+        </button>
+        <div className="flow-stage-tabs" role="tablist" aria-label={title}>
+          {nodes.map((node, index) => (
+            <button
+              className={`${node.id === selectedNode.id ? "selected" : ""}${node.id === currentNodeId ? " current" : ""}`}
+              disabled={disabled}
+              key={node.id}
+              type="button"
+              onClick={() => onSelect(node.id)}
+              role="tab"
+              aria-selected={node.id === selectedNode.id}
+            >
+              <span>{stagePrefix(title)} {node.stageNo ?? index}</span>
+              <strong>{node.name}</strong>
+              {node.id === currentNodeId ? <em>当前阶段</em> : null}
+            </button>
+          ))}
+        </div>
+        <button
+          className="icon-button"
+          type="button"
+          onClick={() => onSelect(nodes[Math.min(nodes.length - 1, selectedIndex + 1)].id)}
+          disabled={selectedIndex >= nodes.length - 1 || disabled}
+          aria-label={`查看下一${title}阶段`}
+        >
+          <ChevronRight size={18} />
+        </button>
+      </div>
+      <div className="flow-stage-single">
+        <FlowStageCard
+          node={selectedNode}
+          current={selectedNode.id === currentNodeId}
+          developers={["projectPrepare", "projectComplete", "projectEnded"].includes(selectedNode.id) ? [] : roleSummary.developers}
+          extras={stageExtras?.[selectedNode.id]}
+        />
+      </div>
+      </>
+      )}
+    </section>
+  );
+}
+
+function stagePrefix(title: string) {
+  return title === "阶段" ? "阶段" : title;
+}
+
 function FlowStageCard({
   node,
   current,
-  canConfigure,
-  activeRole,
-  onEdit
+  developers,
+  extras = []
 }: {
   node: FlowNode;
   current: boolean;
-  canConfigure: boolean;
-  activeRole: RoleId;
-  onEdit: (node: FlowNode) => void;
+  developers: FlowDeveloperSummary[];
+  extras?: { label: string; value: string }[];
 }) {
   return (
     <div className="flow-stage-cell">
       <article className={`flow-node-card${node.status === "风险" ? " risk" : ""}${current ? " current" : ""}`}>
         <div className="flow-node-card-head">
-          <span className="flow-node-owner">负责人：<strong>{node.owner}</strong></span>
           <StatusTag tone={node.status === "风险" ? "red" : toneForStatus(node.status)}>{node.status}</StatusTag>
         </div>
         <p>{node.description}</p>
-        {canConfigureNode(activeRole, node, canConfigure) ? (
-          <button className="btn secondary node-config-button" onClick={() => onEdit(node)}>
-            <Settings2 size={14} /> 节点设置
-          </button>
+        {extras.length > 0 ? (
+          <div className="flow-stage-extra-grid">
+            {extras.map((item) => (
+              <span key={item.label}>
+                <small>{item.label}</small>
+                <strong>{item.value}</strong>
+              </span>
+            ))}
+          </div>
         ) : null}
-        <div className="flow-node-deliverable">
-          <span>交付物</span>
-          <strong>{node.deliverable}</strong>
-        </div>
+        {developers.length > 0 ? (
+          <div className="flow-dev-list">
+            {developers.map((developer) => (
+              <button className="flow-dev-chip" key={developer.name} type="button">
+                <strong>{developer.name}</strong>
+                <span>{developer.actual}/{developer.estimate}h</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
       </article>
     </div>
   );
 }
 
-function canConfigureNode(activeRole: RoleId, node: FlowNode, canConfigure: boolean) {
-  if (!canConfigure || !node.configurable) return false;
-  if (activeRole === "admin") return true;
-  if (["requester", "businessOwner"].includes(activeRole)) return node.lane === "需求方";
-  if (activeRole === "product") return node.lane === "产品经理";
-  if (activeRole === "pm") return node.lane === "项目经理" || node.stageId === "projectExecution";
-  if (activeRole === "developer") return node.lane === "开发";
-  return false;
+function buildRoleSummary(flow: DemandProjectFlow, tasks: Task[]): FlowRoleSummary {
+  const product = flow.nodes.find((node) => node.lane === "产品经理")?.owner;
+  const pm = flow.nodes.find((node) => node.lane === "项目经理")?.owner;
+  const taskSummaries = summarizeDeveloperTasks(tasks.filter((task) => task.projectId === flow.projectId));
+  const fallbackDevelopers = unique(flow.assignments.map((assignment) => assignment.person)).map((name) => {
+    const assignmentHours = flow.assignments.filter((assignment) => assignment.person === name).reduce((sum, assignment) => sum + assignment.hours, 0);
+    return { name, actual: 0, estimate: assignmentHours };
+  });
+  return {
+    product,
+    pm,
+    developers: taskSummaries.length > 0 ? taskSummaries : fallbackDevelopers
+  };
+}
+
+function summarizeDeveloperTasks(tasks: Task[]): FlowDeveloperSummary[] {
+  const byOwner = new Map<string, FlowDeveloperSummary>();
+  tasks.forEach((task) => {
+    const current = byOwner.get(task.owner) ?? { name: task.owner, actual: 0, estimate: 0 };
+    current.actual += task.actual;
+    current.estimate += task.estimate;
+    byOwner.set(task.owner, current);
+  });
+  return Array.from(byOwner.values());
+}
+
+function unique(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function inferDemandCurrent(flow: DemandProjectFlow) {
+  if (flow.currentDemandNodeId) return flow.currentDemandNodeId;
+  if (demandStageIds.includes(flow.currentNodeId)) return flow.currentNodeId;
+  return "solutionConfirm";
+}
+
+function inferProjectCurrent(flow: DemandProjectFlow) {
+  if (flow.currentProjectNodeId) return flow.currentProjectNodeId;
+  if (!flow.projectId || flow.projectId === "待项目关联") return undefined;
+  if (flow.currentNodeId === "projectPrepare" || flow.currentNodeId === "projectStart" || flow.currentNodeId === "projectExecution" || flow.currentNodeId === "projectComplete" || flow.currentNodeId === "projectEnded") return flow.currentNodeId;
+  return "projectPrepare";
 }

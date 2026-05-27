@@ -1,5 +1,5 @@
 import { projectDeliveryProgress } from "./projectProgress";
-import type { Project, ResourceCalendarEntry, ResourcePerson, Task, Tone } from "./types";
+import type { Demand, Priority, Project, ResourceCalendarEntry, ResourcePerson, Task, Tone } from "./types";
 
 export interface GanttBar {
   id: string;
@@ -19,7 +19,7 @@ export interface GanttBar {
 export interface GanttRow {
   id: string;
   label: string;
-  subLabel: string;
+  subLabel?: string;
   status?: string;
   statusTone?: Tone;
   meta?: string;
@@ -34,14 +34,23 @@ export interface GanttGroup {
 }
 
 const projectPalette: Tone[] = ["blue", "cyan", "green", "violet", "orange", "red"];
-const projectStageOrder = ["项目启动", "项目进行", "项目验收", "验收完成"];
+const projectStageOrder = ["项目准备", "项目启动", "项目进行", "项目完成", "项目结束"];
+const priorityOrder: Priority[] = ["P0", "P1", "P2", "P3"];
+const priorityRank: Record<Priority, number> = { P0: 0, P1: 1, P2: 2, P3: 3 };
 
-export function buildProjectGanttGroups(projects: Project[], tasks: Task[]): GanttGroup[] {
+export function buildProjectGanttGroups(projects: Project[], tasks: Task[], demands: Demand[] = []): GanttGroup[] {
   const taskByProject = groupBy(tasks, (task) => task.projectId);
-  const grouped = groupBy(projects, projectMainTeam);
+  const demandById = new Map(demands.map((demand) => [demand.id, demand]));
+  const sortedProjects = [...projects].sort((left, right) => {
+    const leftPriority = demandById.get(left.demandId)?.priority ?? "P3";
+    const rightPriority = demandById.get(right.demandId)?.priority ?? "P3";
+    return priorityRank[leftPriority] - priorityRank[rightPriority] || left.name.localeCompare(right.name, "zh-Hans-CN");
+  });
+  const grouped = groupBy(sortedProjects, (project) => demandById.get(project.demandId)?.priority ?? "P3");
 
-  return ["IT部项目治理", "IT部项目进行", "需求方验收上线"].map((title, groupIndex) => {
-    const rows = (grouped.get(title) ?? []).map((project, index) => {
+  return priorityOrder.map((priority, groupIndex) => {
+    const priorityProjects = grouped.get(priority) ?? [];
+    const rows = priorityProjects.map((project, index) => {
       const projectTasks = taskByProject.get(project.id) ?? [];
       const range = projectDateRange(project, projectTasks, index + groupIndex);
       const nextMilestone = project.milestones.find((milestone) => milestone.status !== "完成") ?? project.milestones.at(-1);
@@ -50,10 +59,6 @@ export function buildProjectGanttGroups(projects: Project[], tasks: Task[]): Gan
       return {
         id: project.id,
         label: project.name,
-        subLabel: `${project.owner} · ${project.projectType} · ${project.implementation}`,
-        status: project.stage,
-        statusTone: toneForProjectStage(project.stage),
-        meta: nextMilestone ? `下一节点：${nextMilestone.name} ${nextMilestone.date}` : `${deliveryProgress}%`,
         bars: [
           {
             id: `${project.id}-delivery`,
@@ -81,9 +86,9 @@ export function buildProjectGanttGroups(projects: Project[], tasks: Task[]): Gan
     });
 
     return {
-      id: title,
-      title,
-      subtitle: teamSubtitle(title),
+      id: priority,
+      title: `${priority} 项目`,
+      subtitle: `${priorityProjects.length} 个项目 · 按需求优先级排序`,
       rows
     };
   }).filter((group) => group.rows.length > 0);
@@ -197,18 +202,6 @@ function resourceDateRange(entries: ResourceCalendarEntry[], allocationIndex: nu
   }
   const start = addDays("2026-05-26", allocationIndex * 8 + (personIndex % 3) * 3);
   return { start, end: addDays(start, 18 + allocationIndex * 5) };
-}
-
-function projectMainTeam(project: Project) {
-  if (project.stage === "项目启动") return "IT部项目治理";
-  if (project.stage === "项目进行") return "IT部项目进行";
-  return "需求方验收上线";
-}
-
-function teamSubtitle(title: string) {
-  if (title === "IT部项目治理") return "项目申请、立项、资源排期和供应商治理";
-  if (title === "IT部项目进行") return "内部开发、联调、技术问题处理";
-  return "需求方评分、上线确认和归档配合";
 }
 
 function toneForProjectStage(stage: string): Tone {

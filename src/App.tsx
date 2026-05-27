@@ -29,7 +29,7 @@ export default function App() {
   const [flowActionLogs, setFlowActionLogs] = useState<FlowActionLog[]>([]);
   const [projectActionLogs, setProjectActionLogs] = useState<ProjectActionLog[]>([]);
   const [taskPresetFilter, setTaskPresetFilter] = useState<TaskPresetFilter | null>(null);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [profileTab, setProfileTab] = useState<ProfileTab>("personal");
   const [detailView, setDetailView] = useState<{ type: "demand" | "project"; id: string; from: PageId } | null>(null);
   const role = roles.find((item) => item.id === activeRole)!;
@@ -65,6 +65,13 @@ export default function App() {
     }
   }, [activePage, visibleNavItems, visiblePageIds]);
 
+  useEffect(() => {
+    if ((activeRole === "requester" || activeRole === "businessOwner" || activeRole === "pm") && activePage === "dashboard") {
+      setActivePage(activeRole === "pm" ? "projects" : "demands");
+      setDetailView(null);
+    }
+  }, [activePage, activeRole]);
+
   const detailDemand = detailView?.type === "demand" ? demands.find((item) => item.id === detailView.id) : undefined;
   const detailProject = detailView?.type === "project" ? projects.find((item) => item.id === detailView.id) : undefined;
 
@@ -76,6 +83,14 @@ export default function App() {
 
   function changePage(page: PageId) {
     setDetailView(null);
+    if (page === "dashboard" && (activeRole === "requester" || activeRole === "businessOwner")) {
+      setActivePage("demands");
+      return;
+    }
+    if (page === "dashboard" && activeRole === "pm") {
+      setActivePage("projects");
+      return;
+    }
     setActivePage(page);
   }
 
@@ -120,21 +135,9 @@ export default function App() {
           : demand
       )
     );
-    if (analysis.budgetEstimate > 0) {
-      setProjects((items) =>
-        items.map((project) =>
-          project.demandId === id
-            ? {
-                ...project,
-                budget: analysis.budgetEstimate
-              }
-            : project
-        )
-      );
-    }
     createNotification({
       title: `${id} 需求评审字段已更新`,
-      content: `${role.userName} 更新了价值评分、迭代版本、资源方案、预算测算和实现决策：${summary}`,
+      content: `${role.userName} 更新了技术路线和实现方式判断：${summary}`,
       type: "需求评审更新",
       level: "blue",
       channel: "站内信",
@@ -152,7 +155,7 @@ export default function App() {
           ? {
               ...demand,
               score: review.score,
-              status: "验收完成",
+              status: "方案确认",
               progress: 100,
               acceptanceReview: review,
               lifecycleSteps: demand.lifecycleSteps.map((step) => ({ ...step, done: true, current: false }))
@@ -242,7 +245,7 @@ export default function App() {
               ...item,
               assignments,
               nodes: item.nodes.map((node) =>
-                node.stageId === "projectExecution"
+                node.stageId === "projectStart"
                   ? {
                       ...node,
                       owner: assignedPeople.length > 0 ? assignedPeople.join(" / ") : node.owner,
@@ -261,7 +264,7 @@ export default function App() {
         actor: role.userName,
         roleId: activeRole,
         actionName: "分配开发/供应商",
-        targetNodeId: "projectExecution",
+        targetNodeId: "projectStart",
         time: nowText(),
         summary,
         note: summary
@@ -326,13 +329,25 @@ export default function App() {
     if (!flow) return;
     const demand = demands.find((item) => item.id === flow.demandId);
     const project = projects.find((item) => item.id === flow.projectId);
+    const generatedProject = actionId === "product.preCreateProject" && demand && !project ? createProjectFromDemand(flow, demand) : undefined;
+    const effectiveProject = project ?? generatedProject;
+    const nextProjectId = effectiveProject?.id ?? flow.projectId;
     const action = flowActionMeta[actionId];
     const targetNodeId = flowActionTargetNode[actionId];
 
-    setDemandProjectFlows((items) => items.map((item) => (item.id === flowId ? reduceFlowByAction(item, actionId) : item)));
-    setDemands((items) => items.map((item) => (item.id === flow.demandId ? reduceDemandByFlowAction(item, actionId) : item)));
-    setProjects((items) => items.map((item) => (item.id === flow.projectId ? reduceProjectByFlowAction(item, actionId) : item)));
-    setDeliveryRequests((items) => items.map((item) => (item.demandId === flow.demandId ? reduceDeliveryRequestByFlowAction(item, actionId) : item)));
+    setDemandProjectFlows((items) => items.map((item) => (item.id === flowId ? reduceFlowByAction({ ...item, projectId: nextProjectId }, actionId) : item)));
+    setDemands((items) =>
+      items.map((item) => {
+        if (item.id !== flow.demandId) return item;
+        const nextDemand = reduceDemandByFlowAction(item, actionId);
+        return generatedProject ? { ...nextDemand, linkedProject: generatedProject.name } : nextDemand;
+      })
+    );
+    setProjects((items) => {
+      const nextItems = generatedProject ? [generatedProject, ...items] : items;
+      return nextItems.map((item) => (item.id === nextProjectId ? reduceProjectByFlowAction(item, actionId) : item));
+    });
+    setDeliveryRequests((items) => items.map((item) => (item.demandId === flow.demandId ? { ...reduceDeliveryRequestByFlowAction(item, actionId), projectId: nextProjectId } : item)));
     setFlowActionLogs((items) => [
       {
         id: `FL-${Date.now()}-${items.length + 1}`,
@@ -342,13 +357,13 @@ export default function App() {
         actionName: action.name,
         targetNodeId,
         time: nowText(),
-        summary: withActionNote(action.summary(flow, demand, project), note),
+        summary: withActionNote(action.summary({ ...flow, projectId: nextProjectId }, demand, effectiveProject), note),
         note: note.trim() || undefined
       },
       ...items
     ]);
 
-    createNotification(notificationForFlowAction(actionId, role, flow, demand, project, note));
+    createNotification(notificationForFlowAction(actionId, role, { ...flow, projectId: nextProjectId }, demand, effectiveProject, note));
   }
 
   function updateProjectRecord(projectId: string, patch: Partial<Project>, summary: string) {
@@ -400,7 +415,7 @@ export default function App() {
       title: `${project.name} 阶段推进到 ${stage}`,
       content: `${role.userName} 将交付阶段推进到 ${stage}，请相关负责人同步处理后续事项。`,
       type: "交付阶段推进",
-      level: stage === "验收完成" ? "green" : "blue",
+      level: stage === "项目结束" ? "green" : "blue",
       channel: "站内信",
       targetRoles: ["product", "pm", "businessOwner"],
       targetUserNames: relatedFlow ? [...relatedFlow.assignments.map((item) => item.person), project.owner] : [project.owner],
@@ -473,16 +488,13 @@ export default function App() {
         <DemandDetail
           demand={detailDemand}
           flow={demandProjectFlows.find((flow) => flow.demandId === detailDemand.id)}
+          linkedProject={projects.find((project) => project.demandId === detailDemand.id || project.name === detailDemand.linkedProject)}
           activeRole={activeRole}
-          activeUser={role}
-          flowActionLogs={flowActionLogs}
-          canAdjustPriority={activeRole === "admin" || activeRole === "businessOwner"}
           onBack={closeDetail}
-          onPriorityChange={updateDemandPriority}
+          onOpenProject={openProjectDetail}
           onSubmitReview={submitAcceptanceReview}
           onUpdateAnalysis={updateDemandAnalysis}
           onApplyFlowAction={applyFlowAction}
-          onAssignWork={assignWork}
         />
       ) : null}
       {detailView?.type === "project" && detailProject ? (
@@ -508,10 +520,12 @@ export default function App() {
       ) : null}
       {detailView ? null : (
         <>
-      {activePage === "dashboard" ? <Dashboard role={activeRole} projects={projects} tasks={tasks} flows={demandProjectFlows} onOpenProjectDetail={openProjectDetail} /> : null}
+      {activePage === "dashboard" && !["requester", "businessOwner", "pm"].includes(activeRole) ? <Dashboard role={activeRole} activeUser={role} demands={demands} projects={projects} tasks={tasks} flows={demandProjectFlows} onOpenProjectDetail={openProjectDetail} onOpenDemandDetail={openDemandDetail} /> : null}
       {activePage === "demands" ? (
         <Demands
           demands={visibleDemands}
+          projects={projects}
+          showRequesterWorkbench={activeRole === "requester" || activeRole === "businessOwner"}
           canAdjustPriority={activeRole === "admin" || activeRole === "businessOwner"}
           canCreateDemand={["admin", "requester", "businessOwner"].includes(activeRole)}
           onPriorityChange={updateDemandPriority}
@@ -573,81 +587,106 @@ export default function App() {
   );
 }
 
-const projectStageOrder: ProjectStage[] = ["项目启动", "项目进行", "项目验收", "验收完成"];
-const workflowStageOrder: WorkflowStageId[] = ["draft", "demandReview", "solutionConfirm", "projectStart", "projectExecution", "projectAcceptance", "acceptedComplete"];
+const projectStageOrder: ProjectStage[] = ["项目准备", "项目启动", "项目进行", "项目完成", "项目结束"];
+const demandStageOrder: WorkflowStageId[] = ["demandReview", "solutionConfirm"];
+const projectWorkflowStageOrder: WorkflowStageId[] = ["projectPrepare", "projectStart", "projectExecution", "projectComplete", "projectEnded"];
 
 const flowActionTargetNode: Record<FlowActionId, WorkflowStageId> = {
-  "requester.submitReview": "demandReview",
-  "product.returnDemand": "draft",
+  "product.returnDemand": "demandReview",
   "product.submitSolution": "solutionConfirm",
-  "requester.abandonDemand": "acceptedComplete",
-  "requester.submitProjectRequest": "projectStart",
-  "pm.startProject": "projectExecution",
-  "pm.returnSolution": "solutionConfirm",
-  "pm.assignDevelopers": "projectExecution",
+  "requester.abandonDemand": "solutionConfirm",
+  "product.preCreateProject": "projectPrepare",
+  "pm.assignResources": "projectStart",
+  "product.startExecution": "projectExecution",
   "developer.createTask": "projectExecution",
   "developer.updateProgress": "projectExecution",
   "developer.completeTask": "projectExecution",
-  "pm.submitAcceptance": "projectAcceptance",
-  "product.completeAcceptance": "acceptedComplete",
-  "product.returnExecution": "projectExecution",
-  "requester.submitScore": "acceptedComplete"
+  "product.submitProjectComplete": "projectComplete",
+  "requester.submitScore": "projectEnded"
 };
 
 const flowActionMeta: Record<FlowActionId, { name: string; summary: (flow: DemandProjectFlow, demand?: Demand, project?: Project) => string }> = {
-  "requester.submitReview": { name: "发起需求评审", summary: (_flow, demand) => `${demand?.requester ?? "需求方"} 发起 ${demand?.name ?? "需求"} 评审。` },
   "product.returnDemand": { name: "打回需求", summary: (_flow, demand) => `产品经理打回 ${demand?.name ?? "需求"}，要求需求方补充背景、目标或价值。` },
-  "product.submitSolution": { name: "发起方案确认", summary: (_flow, demand) => `产品经理完成 ${demand?.name ?? "需求"} 评审，提交方案、资源投入和 AI 评分给需求方确认。` },
+  "product.submitSolution": { name: "发起方案确认", summary: (_flow, demand) => `产品经理完成 ${demand?.name ?? "需求"} 技术路线评审，提交实现方式判断给需求方确认。` },
   "requester.abandonDemand": { name: "放弃需求", summary: (_flow, demand) => `${demand?.requester ?? "需求方"} 放弃 ${demand?.name ?? "需求"}，流程关闭。` },
-  "requester.submitProjectRequest": { name: "发起项目申请", summary: (flow) => `需求方确认方案并发起项目申请：${flow.resourceRequest.need}。` },
-  "pm.startProject": { name: "项目启动", summary: (_flow, _demand, project) => `唯一项目经理确认资源可用，启动 ${project?.name ?? "项目"}。` },
-  "pm.returnSolution": { name: "退回方案确认", summary: (_flow, demand) => `项目经理退回 ${demand?.name ?? "需求"} 的方案确认，请需求方和产品经理补充资源或范围。` },
-  "pm.assignDevelopers": { name: "指派开发", summary: (flow) => `项目经理指派开发：${flow.assignments.map((item) => item.person).join("、")}。` },
+  "product.preCreateProject": { name: "项目预创建", summary: (flow, demand, project) => `产品经理将 ${demand?.name ?? "需求"} 预创建为 ${project?.name ?? flow.title}，并提交资源需求。` },
+  "pm.assignResources": { name: "资源分配完成", summary: (flow) => {
+    const people = flow.assignments.map((item) => item.person).filter(Boolean);
+    return people.length > 0 ? `项目经理完成资源分配：${people.join("、")}。` : "项目经理完成开发/供应商分配，并推进到项目启动。";
+  } },
+  "product.startExecution": { name: "进入项目进行", summary: (_flow, _demand, project) => `产品经理填写启动结束时间，${project?.name ?? "项目"} 进入项目进行。` },
   "developer.createTask": { name: "新增子任务", summary: (_flow, _demand, project) => `开发为 ${project?.name ?? "项目"} 新增子任务并估算工时。` },
   "developer.updateProgress": { name: "汇报进度", summary: (_flow, _demand, project) => `开发更新 ${project?.name ?? "项目"} 任务进度和工时。` },
   "developer.completeTask": { name: "完成任务", summary: (_flow, _demand, project) => `开发完成 ${project?.name ?? "项目"} 下的任务。` },
-  "pm.submitAcceptance": { name: "项目验收", summary: (_flow, _demand, project) => `项目经理确认任务全部完成，提交 ${project?.name ?? "项目"} 给产品经理验收。` },
-  "product.completeAcceptance": { name: "验收完成", summary: (_flow, demand) => `产品经理完成 ${demand?.name ?? "需求"} 的项目验收，等待需求方评分。` },
-  "product.returnExecution": { name: "退回项目进行", summary: (_flow, _demand, project) => `产品经理将 ${project?.name ?? "项目"} 退回项目进行阶段继续整改。` },
+  "product.submitProjectComplete": { name: "项目完成待评分", summary: (_flow, demand, project) => `产品经理确认 ${project?.name ?? "项目"} 已完成，等待 ${demand?.requester ?? "需求方"} 验收评分。` },
   "requester.submitScore": { name: "提交评分", summary: (_flow, demand) => `${demand?.requester ?? "需求方"} 提交验收评分，${demand?.name ?? "需求"} 流程关闭。` }
 };
 
 function reduceFlowByAction(flow: DemandProjectFlow, actionId: FlowActionId): DemandProjectFlow {
+  const nextDemandNodeId = nextDemandNodeForAction(flow, actionId);
+  const nextProjectNodeId = nextProjectNodeForAction(flow, actionId);
   const currentNodeId = flowActionTargetNode[actionId];
   return {
     ...flow,
     currentNodeId,
+    currentDemandNodeId: nextDemandNodeId,
+    currentProjectNodeId: nextProjectNodeId,
     resourceRequest: { ...flow.resourceRequest, status: deliveryStatusForAction(flow.resourceRequest.status, actionId) },
-    nodes: flow.nodes.map((node) => ({ ...node, status: flowNodeStatus(node.stageId ?? (node.id as WorkflowStageId), currentNodeId, actionId) }))
+    nodes: flow.nodes.map((node) => ({ ...node, status: flowNodeStatus(node.stageId ?? (node.id as WorkflowStageId), nextDemandNodeId, nextProjectNodeId, actionId) }))
   };
 }
 
-function flowNodeStatus(stageId: WorkflowStageId, currentStage: WorkflowStageId, actionId: FlowActionId): FlowNode["status"] {
-  const nodeIndex = workflowStageOrder.indexOf(stageId);
-  const currentIndex = workflowStageOrder.indexOf(currentStage);
-  if (actionId === "requester.submitScore") return nodeIndex <= currentIndex ? "已完成" : "待开始";
-  if (actionId === "requester.abandonDemand") return nodeIndex === currentIndex ? "风险" : nodeIndex < currentIndex ? "已完成" : "待开始";
+function nextDemandNodeForAction(flow: DemandProjectFlow, actionId: FlowActionId): WorkflowStageId {
+  if (actionId === "product.returnDemand") return "demandReview";
+  if (actionId === "product.submitSolution") return "solutionConfirm";
+  if (actionId === "requester.abandonDemand") return "solutionConfirm";
+  if (actionId === "product.preCreateProject" || actionId === "pm.assignResources" || actionId === "product.startExecution" || actionId.startsWith("developer") || actionId === "product.submitProjectComplete" || actionId === "requester.submitScore") return "solutionConfirm";
+  return flow.currentDemandNodeId ?? inferDemandNodeFromCurrent(flow.currentNodeId);
+}
+
+function nextProjectNodeForAction(flow: DemandProjectFlow, actionId: FlowActionId): WorkflowStageId | undefined {
+  if (actionId === "product.preCreateProject") return "projectPrepare";
+  if (actionId === "pm.assignResources") return "projectStart";
+  if (actionId === "product.startExecution" || actionId.startsWith("developer")) return "projectExecution";
+  if (actionId === "product.submitProjectComplete") return "projectComplete";
+  if (actionId === "requester.submitScore") return "projectEnded";
+  return flow.currentProjectNodeId ?? inferProjectNodeFromCurrent(flow.currentNodeId);
+}
+
+function inferDemandNodeFromCurrent(currentNodeId: string): WorkflowStageId {
+  if (currentNodeId === "demandReview" || currentNodeId === "solutionConfirm") return currentNodeId;
+  return "solutionConfirm";
+}
+
+function inferProjectNodeFromCurrent(currentNodeId: string): WorkflowStageId | undefined {
+  if (currentNodeId === "projectPrepare" || currentNodeId === "projectStart" || currentNodeId === "projectExecution" || currentNodeId === "projectComplete" || currentNodeId === "projectEnded") return currentNodeId;
+  return undefined;
+}
+
+function flowNodeStatus(stageId: WorkflowStageId, currentDemandStage: WorkflowStageId, currentProjectStage: WorkflowStageId | undefined, actionId: FlowActionId): FlowNode["status"] {
+  const isDemandStage = demandStageOrder.includes(stageId);
+  const order = isDemandStage ? demandStageOrder : projectWorkflowStageOrder;
+  const currentStage = isDemandStage ? currentDemandStage : currentProjectStage;
+  if (!currentStage) return "待开始";
+  const nodeIndex = order.indexOf(stageId);
+  const currentIndex = order.indexOf(currentStage);
+  if (nodeIndex < 0 || currentIndex < 0) return "待开始";
+  if (actionId === "requester.abandonDemand" && isDemandStage) return nodeIndex === currentIndex ? "风险" : nodeIndex < currentIndex ? "已完成" : "待开始";
   if (nodeIndex < currentIndex) return "已完成";
-  if (nodeIndex === currentIndex) return currentStage === "acceptedComplete" ? "待确认" : "进行中";
+  if (nodeIndex === currentIndex) {
+    if (stageId === "projectEnded") return "已完成";
+    return "进行中";
+  }
   return "待开始";
 }
 
 function reduceDemandByFlowAction(demand: Demand, actionId: FlowActionId): Demand {
   const patch: Partial<Demand> = {};
-  if (actionId === "requester.submitReview") Object.assign(patch, { status: "需求评审", progress: Math.max(demand.progress, 14) });
   if (actionId === "product.returnDemand") Object.assign(patch, { status: "已打回", progress: Math.max(demand.progress, 16) });
-  if (actionId === "product.submitSolution") Object.assign(patch, { status: "方案确认", progress: Math.max(demand.progress, 32) });
+  if (actionId === "product.submitSolution") Object.assign(patch, { status: "方案确认", progress: 100 });
   if (actionId === "requester.abandonDemand") Object.assign(patch, { status: "已放弃", progress: 100 });
-  if (actionId === "requester.submitProjectRequest") Object.assign(patch, { status: "项目启动", progress: Math.max(demand.progress, 45) });
-  if (["pm.startProject", "pm.assignDevelopers", "developer.createTask", "developer.updateProgress", "developer.completeTask", "product.returnExecution"].includes(actionId)) {
-    Object.assign(patch, { status: "项目进行", progress: Math.max(demand.progress, 64) });
-  }
-  if (actionId === "pm.returnSolution") Object.assign(patch, { status: "方案确认", progress: Math.max(demand.progress, 38) });
-  if (actionId === "pm.submitAcceptance") Object.assign(patch, { status: "项目验收", progress: Math.max(demand.progress, 86) });
-  if (actionId === "product.completeAcceptance") Object.assign(patch, { status: "验收完成", progress: Math.max(demand.progress, 96) });
   if (actionId === "requester.submitScore") {
     Object.assign(patch, {
-      status: "验收完成",
       progress: 100,
       lifecycleSteps: demand.lifecycleSteps.map((step) => ({ ...step, done: true, current: false }))
     });
@@ -656,29 +695,40 @@ function reduceDemandByFlowAction(demand: Demand, actionId: FlowActionId): Deman
 }
 
 function reduceProjectByFlowAction(project: Project, actionId: FlowActionId): Project {
-  if (actionId === "requester.submitProjectRequest" || actionId === "pm.returnSolution") return reduceProjectStage(project, "项目启动");
-  if (["pm.startProject", "pm.assignDevelopers", "developer.createTask", "developer.updateProgress", "developer.completeTask", "product.returnExecution"].includes(actionId)) {
+  if (actionId === "product.preCreateProject") return reduceProjectStage(project, "项目准备");
+  if (actionId === "pm.assignResources") return reduceProjectStage(project, "项目启动");
+  if (actionId === "product.startExecution") {
+    return reduceProjectStage({
+      ...project,
+      resourcePlan: { ...project.resourcePlan, startEndDate: new Date().toISOString().slice(0, 10) }
+    }, "项目进行");
+  }
+  if (["developer.createTask", "developer.updateProgress", "developer.completeTask"].includes(actionId)) {
     return reduceProjectStage(project, "项目进行");
   }
-  if (actionId === "pm.submitAcceptance") return reduceProjectStage(project, "项目验收");
-  if (actionId === "product.completeAcceptance" || actionId === "requester.submitScore") return reduceProjectStage(project, "验收完成");
+  if (actionId === "product.submitProjectComplete") return reduceProjectStage(project, "项目完成");
+  if (actionId === "requester.submitScore") return reduceProjectStage(project, "项目结束");
   return project;
 }
 
 function syncFlowWithProjectStage(flow: DemandProjectFlow, stage: ProjectStage): DemandProjectFlow {
   const stageMap: Record<ProjectStage, WorkflowStageId> = {
+    项目准备: "projectPrepare",
     项目启动: "projectStart",
     项目进行: "projectExecution",
-    项目验收: "projectAcceptance",
-    验收完成: "acceptedComplete"
+    项目完成: "projectComplete",
+    项目结束: "projectEnded"
   };
-  const currentNodeId = stageMap[stage];
+  const currentProjectNodeId = stageMap[stage];
+  const currentDemandNodeId = "solutionConfirm";
   return {
     ...flow,
-    currentNodeId,
+    currentNodeId: currentProjectNodeId,
+    currentDemandNodeId,
+    currentProjectNodeId,
     nodes: flow.nodes.map((node) => ({
       ...node,
-      status: flowNodeStatus(node.stageId ?? (node.id as WorkflowStageId), currentNodeId, stage === "验收完成" ? "requester.submitScore" : "pm.startProject")
+      status: flowNodeStatus(node.stageId ?? (node.id as WorkflowStageId), currentDemandNodeId, currentProjectNodeId, stage === "项目结束" ? "requester.submitScore" : "product.startExecution")
     }))
   };
 }
@@ -687,13 +737,58 @@ function reduceDeliveryRequestByFlowAction(request: DeliveryRequest, actionId: F
   return { ...request, status: deliveryStatusForAction(request.status, actionId) as DeliveryRequest["status"] };
 }
 
+function createProjectFromDemand(flow: DemandProjectFlow, demand: Demand): Project {
+  const projectId = `PRJ-${demand.id.replace(/^REQ-/, "")}`;
+  return {
+    id: projectId,
+    name: demand.linkedProject !== "待项目关联" ? demand.linkedProject : demand.name,
+    demandId: demand.id,
+    owner: "李书航",
+    supplierManager: demand.implementation === "内部实现" ? "无外部供应商" : "李书航",
+    projectType: demand.implementation === "外部供应商" ? "硬件项目" : "软件项目",
+    implementation: demand.implementation,
+    stage: "项目准备",
+    progress: 0,
+    budget: demand.analysis.budgetEstimate,
+    usedBudget: 0,
+    personDays: flow.resourceRequest.days,
+    resourcePlan: {
+      internalPersonDays: flow.resourceRequest.days,
+      needsExternalSupplier: demand.implementation !== "内部实现",
+      externalSupplierPersonDays: demand.implementation === "内部实现" ? 0 : Math.max(8, Math.round(flow.resourceRequest.days * 0.45)),
+      externalSupplierRole: demand.implementation === "内部实现" ? "无" : "外部供应商开发/实施",
+      externalSupplierName: demand.implementation === "内部实现" ? "无外部供应商" : "待项目经理确认",
+      assignedResources: []
+    },
+    risk: "低",
+    riskReason: "项目已预创建，等待项目经理分配开发和外部供应商资源。",
+    riskResponse: "项目经理确认内部开发、外部供应商和资源窗口后进入项目启动。",
+    aiScore: {
+      businessValue: demand.analysis.valueScore,
+      urgency: demand.priority === "P0" ? 92 : demand.priority === "P1" ? 82 : demand.priority === "P2" ? 70 : 58,
+      feasibility: 76,
+      total: Math.round((demand.analysis.valueScore * 0.45 + (demand.priority === "P0" ? 92 : demand.priority === "P1" ? 82 : demand.priority === "P2" ? 70 : 58) * 0.25 + 76 * 0.3)),
+      recommendation: demand.analysis.valueScore >= 85 ? "推荐立项" : "谨慎推荐",
+      reasons: [demand.objective, demand.analysis.feasibility, demand.analysis.resourcePlan]
+    },
+    stages: projectStageOrder.map((name, index) => ({ name, done: index === 0 })),
+    milestones: [{ name: "资源分配确认", date: new Date().toISOString().slice(0, 10), status: "待处理" }],
+    resources: [demand.analysis.resourcePlan],
+    taskIds: [],
+    contributions: [
+      { party: "IT部", type: "内部IT", responsibility: "项目资源准备、启动窗口和交付治理", effort: `${flow.resourceRequest.days} 人天`, cost: demand.analysis.budgetEstimate > 0 ? `${Math.round(demand.analysis.budgetEstimate / 10000)} 万预算` : "待测算", status: "待分配" },
+      { party: "业务部门", type: "业务方", responsibility: "验收标准、业务测试和最终评分", effort: "待确认", cost: "业务投入", status: "待参与" }
+    ]
+  };
+}
+
 function deliveryStatusForAction(current: string, actionId: FlowActionId) {
   if (actionId === "product.submitSolution") return "方案确认中";
-  if (actionId === "requester.submitProjectRequest") return "待项目经理启动";
-  if (actionId === "pm.returnSolution") return "退回方案确认";
-  if (actionId === "pm.startProject" || actionId === "pm.assignDevelopers" || actionId.startsWith("developer")) return "项目进行";
-  if (actionId === "pm.submitAcceptance") return "项目验收";
-  if (actionId === "product.completeAcceptance" || actionId === "requester.submitScore" || actionId === "requester.abandonDemand") return "已关闭";
+  if (actionId === "product.preCreateProject") return "项目准备";
+  if (actionId === "pm.assignResources") return "项目启动";
+  if (actionId === "product.startExecution" || actionId.startsWith("developer")) return "项目进行";
+  if (actionId === "product.submitProjectComplete") return "项目完成";
+  if (actionId === "requester.submitScore" || actionId === "requester.abandonDemand") return "项目结束";
   return current;
 }
 
@@ -718,37 +813,29 @@ function notificationForFlowAction(actionId: FlowActionId, actor: RoleOption, fl
   const noteText = note.trim() ? `备注：${note.trim()}` : "";
   const actionName = flowActionMeta[actionId].name;
   const titleByAction: Record<FlowActionId, string> = {
-    "requester.submitReview": `${demand?.name ?? flow.title} 已发起需求评审`,
     "product.returnDemand": `${demand?.name ?? flow.title} 已打回需求`,
     "product.submitSolution": `${demand?.name ?? flow.title} 待需求方确认方案`,
     "requester.abandonDemand": `${demand?.name ?? flow.title} 已放弃`,
-    "requester.submitProjectRequest": `${demand?.name ?? flow.title} 已发起项目申请`,
-    "pm.startProject": `${project?.name ?? flow.title} 已启动`,
-    "pm.returnSolution": `${demand?.name ?? flow.title} 退回方案确认`,
-    "pm.assignDevelopers": `${project?.name ?? flow.title} 已指派开发`,
+    "product.preCreateProject": `${demand?.name ?? flow.title} 已预创建项目`,
+    "pm.assignResources": `${project?.name ?? flow.title} 资源已分配`,
+    "product.startExecution": `${project?.name ?? flow.title} 已进入项目进行`,
     "developer.createTask": `${project?.name ?? flow.title} 新增子任务`,
     "developer.updateProgress": `${project?.name ?? flow.title} 进度已更新`,
     "developer.completeTask": `${project?.name ?? flow.title} 任务已完成`,
-    "pm.submitAcceptance": `${project?.name ?? flow.title} 已提交项目验收`,
-    "product.completeAcceptance": `${demand?.name ?? flow.title} 项目验收完成`,
-    "product.returnExecution": `${project?.name ?? flow.title} 退回项目进行`,
+    "product.submitProjectComplete": `${project?.name ?? flow.title} 已完成待评分`,
     "requester.submitScore": `${demand?.name ?? flow.title} 评分已提交`
   };
   const targetsByAction: Record<FlowActionId, RoleId[]> = {
-    "requester.submitReview": ["product"],
     "product.returnDemand": ["requester", "businessOwner"],
     "product.submitSolution": ["requester", "businessOwner"],
     "requester.abandonDemand": ["product", "pm", "businessOwner"],
-    "requester.submitProjectRequest": ["pm", "product"],
-    "pm.startProject": ["product", "developer", "requester", "businessOwner"],
-    "pm.returnSolution": ["product", "requester", "businessOwner"],
-    "pm.assignDevelopers": ["developer", "product"],
+    "product.preCreateProject": ["pm", "requester", "businessOwner"],
+    "pm.assignResources": ["product", "developer"],
+    "product.startExecution": ["pm", "developer", "requester", "businessOwner"],
     "developer.createTask": ["pm"],
     "developer.updateProgress": ["pm", "product"],
     "developer.completeTask": ["pm"],
-    "pm.submitAcceptance": ["product"],
-    "product.completeAcceptance": ["requester", "businessOwner"],
-    "product.returnExecution": ["pm", "developer"],
+    "product.submitProjectComplete": ["requester", "businessOwner"],
     "requester.submitScore": ["product", "pm", "businessOwner", "executive"]
   };
   return {

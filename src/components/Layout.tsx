@@ -36,6 +36,7 @@ export function AppLayout({
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ systemSettings: true });
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const isNavItemActive = (item: NavItem) => activePage === item.id || Boolean(item.children?.some((child) => child.id === activePage));
+  const isExecutiveDashboard = activePage === "dashboard" && (activeRole === "executive" || activeRole === "admin");
 
   return (
     <div className={`app-shell theme-${theme} ${collapsed ? "sidebar-collapsed" : ""}`}>
@@ -115,7 +116,7 @@ export function AppLayout({
         </div>
       </aside>
 
-      <section className="workspace">
+      <section className={isExecutiveDashboard ? "workspace executive-workspace" : "workspace"}>
         <header className="topbar">
           <div className="search-box">
             <Search size={17} />

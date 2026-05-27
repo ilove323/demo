@@ -430,7 +430,7 @@ function ReportDomainPanels({
 function PortfolioHealth({ projects: visibleProjects }: { projects: Project[] }) {
   const totalBudget = visibleProjects.reduce((sum, project) => sum + project.budget, 0);
   const usedBudget = visibleProjects.reduce((sum, project) => sum + project.usedBudget, 0);
-  const completed = visibleProjects.filter((project) => project.stage === "验收完成").length;
+  const completed = visibleProjects.filter((project) => project.stage === "项目结束").length;
   const avgProgress = Math.round(average(visibleProjects.map(projectDeliveryProgress)));
   const avgAi = Math.round(average(visibleProjects.map((project) => project.aiScore.total)));
 
@@ -568,7 +568,7 @@ function TrendAreaChart({ data, suffix = "" }: { data: { label: string; value: n
 }
 
 function RiskMatrix({ projects: visibleProjects }: { projects: Project[] }) {
-  const stages = ["项目启动", "项目进行", "项目验收", "验收完成"];
+  const stages = ["项目准备", "项目启动", "项目进行", "项目完成", "项目结束"];
   const risks = ["高", "中", "低"];
   return (
     <div className="risk-matrix">
@@ -712,7 +712,7 @@ function DemandValueFunnel({ demands, projects: visibleProjects }: { demands: De
   const steps = [
     { label: "需求池", value: demands.length },
     { label: "高价值", value: evaluated },
-    { label: "已转项目", value: converted },
+    { label: "已关联项目", value: converted },
     { label: "已验收评分", value: accepted }
   ];
   const max = Math.max(...steps.map((step) => step.value), 1);
@@ -942,7 +942,7 @@ function buildMetrics(
   visibleSuppliers: typeof supplierBudgets,
   visibleInvestments: typeof projectInvestmentBreakdowns
 ): MetricView[] {
-  const completedProjects = visibleProjects.filter((project) => project.stage === "验收完成" || projectDeliveryProgress(project) >= 100).length;
+  const completedProjects = visibleProjects.filter((project) => project.stage === "项目结束" || projectDeliveryProgress(project) >= 100).length;
   const highRiskProjects = visibleProjects.filter((project) => project.risk === "高").length;
   const budgetUsed = visibleProjects.reduce((sum, project) => sum + project.usedBudget, 0);
   const budgetTotal = visibleProjects.reduce((sum, project) => sum + project.budget, 0);
@@ -968,7 +968,7 @@ function buildMetrics(
       { label: "需求承接量", value: String(visibleDemands.length), delta: "当前范围", tone: "blue" },
       { label: "平均价值评分", value: String(Math.round(averageValue)), delta: "产品优先级输入", tone: "violet" },
       { label: "转项目率", value: `${percent(flowedDemandCount, visibleDemands.length)}%`, delta: `${flowedDemandCount} 个已关联项目`, tone: "green" },
-      { label: "项目验收需求", value: String(visibleDemands.filter((demand) => demand.status === "项目验收").length), delta: "需组织业务评分", tone: "orange" }
+      { label: "项目完成", value: String(visibleProjects.filter((project) => project.stage === "项目完成").length), delta: "需组织验收结论", tone: "orange" }
     ];
   }
   if (domain === "engineering") {
@@ -985,7 +985,7 @@ function buildMetrics(
       { label: "业务需求量", value: String(visibleDemands.length), delta: "本部门需求池", tone: "blue" },
       { label: "P0/P1 占比", value: `${percent(important, visibleDemands.length)}%`, delta: `${important} 个高优先级`, tone: "orange" },
       { label: "平均验收评分", value: averageReview ? averageReview.toFixed(1) : "暂无", delta: "来自需求方验收", tone: "violet" },
-      { label: "项目验收", value: String(visibleDemands.filter((demand) => demand.status === "项目验收").length), delta: "需需求方确认", tone: "green" }
+      { label: "项目完成", value: String(visibleProjects.filter((project) => project.stage === "项目完成").length), delta: "需产品经理确认", tone: "green" }
     ];
   }
   if (domain === "supplier") {
@@ -1006,8 +1006,8 @@ function buildMetrics(
     ];
   }
   return [
-    { label: "项目总数", value: String(visibleProjects.length), delta: `${completedProjects} 个验收完成`, tone: "blue" },
-    { label: "项目完成率", value: `${percent(completedProjects, visibleProjects.length)}%`, delta: "按验收完成/100%统计", tone: "green" },
+    { label: "项目总数", value: String(visibleProjects.length), delta: `${completedProjects} 个项目结束`, tone: "blue" },
+    { label: "项目完成率", value: `${percent(completedProjects, visibleProjects.length)}%`, delta: "按项目结束/100%统计", tone: "green" },
     { label: "预算使用率", value: `${percent(budgetUsed, budgetTotal)}%`, delta: `${formatMoney(budgetUsed)} / ${formatMoney(budgetTotal)}`, tone: "orange" },
     { label: "高风险项目", value: String(highRiskProjects), delta: "需管理层关注", tone: "red" }
   ];
@@ -1099,7 +1099,7 @@ function buildInsights(
 ) {
   const highRiskProject = visibleProjects.find((project) => project.risk === "高");
   const overloaded = resourcePeople.find((person) => person.assigned > person.capacity);
-  const pendingDemand = visibleDemands.find((demand) => demand.status === "项目验收" || demand.status === "需求评审");
+  const pendingDemand = visibleDemands.find((demand) => demand.status === "方案确认" || demand.status === "需求评审");
   const riskySupplier = visibleSuppliers.find((item) => item.riskStatus === "高");
   const heavyInvestment = [...visibleInvestments].sort((a, b) => b.internalDays - a.internalDays)[0];
 
@@ -1120,13 +1120,13 @@ function buildInsights(
   if (domain === "product") {
     return [
       { type: "价值", tone: "violet" as Tone, title: `平均价值 ${Math.round(average(visibleDemands.map((demand) => demand.analysis.valueScore)))}`, body: "可结合实现方式和资源申请状态决定下一批迭代优先级。" },
-      { type: "流程", tone: "blue" as Tone, title: `${visibleProjects.length} 个需求已转项目`, body: "资源申请、方案确认和验收节点应在需求详情或项目详情继续处理。" },
-      { type: "待办", tone: "orange" as Tone, title: pendingDemand?.name ?? "暂无关键待办", body: pendingDemand ? `${pendingDemand.status} · ${pendingDemand.objective}` : "暂无项目验收或需求评审需求。" }
+      { type: "流程", tone: "blue" as Tone, title: `${visibleProjects.length} 个需求已关联项目`, body: "方案确认结束后由产品经理预创建项目，项目完成后由需求方评分。" },
+      { type: "待办", tone: "orange" as Tone, title: pendingDemand?.name ?? "暂无关键待办", body: pendingDemand ? `${pendingDemand.status} · ${pendingDemand.objective}` : "暂无方案确认或需求评审需求。" }
     ];
   }
   if (domain === "operations") {
     return [
-      { type: "验收", tone: "green" as Tone, title: `${visibleDemands.filter((demand) => demand.status === "项目验收").length} 个项目验收`, body: "业务部门负责人可在需求管理中组织评分和结论沉淀。" },
+      { type: "验收", tone: "green" as Tone, title: `${visibleProjects.filter((project) => project.stage === "项目完成").length} 个项目完成`, body: "项目完成后等待需求方验收评分，评分后进入项目结束。" },
       { type: "优先级", tone: "orange" as Tone, title: `${visibleDemands.filter((demand) => ["P0", "P1"].includes(demand.priority)).length} 个高优先级需求`, body: "建议与产品经理确认资源窗口和上线期望。" },
       { type: "投入", tone: "cyan" as Tone, title: heavyInvestment?.project ?? "暂无投入项目", body: heavyInvestment ? `${heavyInvestment.internalDays} 人天 · ${heavyInvestment.businessRole}` : "暂无投入拆解。" }
     ];
@@ -1141,7 +1141,7 @@ function buildInsights(
   return [
     { type: "风险", tone: highRiskProject ? "red" as Tone : "green" as Tone, title: highRiskProject?.name ?? "无高风险项目", body: highRiskProject ? projectDeliveryNote(highRiskProject) : "风险处于可控状态。" },
     { type: "预算", tone: "orange" as Tone, title: `预算使用率 ${percent(visibleProjects.reduce((sum, project) => sum + project.usedBudget, 0), visibleProjects.reduce((sum, project) => sum + project.budget, 0))}%`, body: "预算偏差需要结合项目进度、供应商付款和内部人天一起判断。" },
-    { type: "交付", tone: "blue" as Tone, title: `${visibleProjects.filter((project) => project.stage === "验收完成").length} 个项目验收完成`, body: "可切换项目绩效或资源预算域查看下钻指标。" }
+    { type: "交付", tone: "blue" as Tone, title: `${visibleProjects.filter((project) => project.stage === "项目结束").length} 个项目结束项目`, body: "可切换项目绩效或资源预算域查看下钻指标。" }
   ];
 }
 
@@ -1201,7 +1201,7 @@ function resourceRequestStatus(demands: Demand[]) {
   const demandIds = new Set(demands.map((demand) => demand.id));
   return chartDataOrEmpty(
     countBy(projects.filter((project) => demandIds.has(project.demandId)), (project) => {
-      if (projectDeliveryProgress(project) >= 90 || project.stage === "项目验收" || project.stage === "验收完成") return "已安排";
+      if (projectDeliveryProgress(project) >= 90 || project.stage === "项目完成" || project.stage === "项目结束") return "已安排";
       if (project.stage === "项目进行") return "执行中";
       if (project.stage === "项目启动") return "评估中";
       return "待申请";

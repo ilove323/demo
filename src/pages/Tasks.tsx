@@ -2,9 +2,9 @@ import { Clock, MoveRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { resourceCalendars } from "../data";
 import { FilterPanel } from "../components/FilterPanel";
-import type { Project, RoleId, RoleOption, Task, TaskPresetFilter, TaskStatus } from "../types";
+import type { Project, RoleId, RoleOption, Task, TaskPresetFilter, TaskStatus, Tone } from "../types";
 import { ScheduleCalendar } from "../components/ScheduleCalendar";
-import { Modal, ProgressBar, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
+import { MetricCard, Modal, ProgressBar, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
 
 const statuses: TaskStatus[] = ["待开始", "进行中", "测试中", "已完成", "暂停"];
 type TaskViewMode = "calendar" | "stage" | "list" | "card";
@@ -100,6 +100,7 @@ export function Tasks({
     () => scopeTasks(tasks, projects, activeRole, activeUser),
     [activeRole, activeUser, projects, tasks]
   );
+  const taskWorkbenchCards = useMemo(() => buildTaskWorkbenchCards(visibleTasks, projects), [projects, visibleTasks]);
   const visibleTaskIds = useMemo(() => new Set(visibleTasks.map((task) => task.id)), [visibleTasks]);
   const baseCalendarEntries = useMemo(
     () =>
@@ -205,6 +206,15 @@ export function Tasks({
           <TaskViewToggle value={taskViewMode} onChange={setTaskViewMode} />
           {["admin", "developer"].includes(activeRole) ? <button className="btn" type="button" onClick={() => openCreateTask()}>新增子任务</button> : null}
           <StatusTag tone="orange">{isRdOwner ? `部门任务 ${visibleTasks.length}` : "本周工时填报率 78%"}</StatusTag>
+        </div>
+      </div>
+
+      <div className="task-workbench">
+        <SectionHeader title="开发任务工作台" />
+        <div className="grid-4">
+          {taskWorkbenchCards.map((card) => (
+            <MetricCard key={card.label} {...card} />
+          ))}
         </div>
       </div>
 
@@ -330,37 +340,41 @@ export function Tasks({
       </Modal>
       <Modal title={creatingFrom && creatingFrom !== "new" ? `拆分 ${creatingFrom.id}` : "新增子任务"} open={Boolean(creatingFrom)} onClose={() => setCreatingFrom(null)}>
         <div className="form-grid task-create-form">
-          <label>
-            所属项目
-            <select value={newTaskProjectId} onChange={(event) => setNewTaskProjectId(event.target.value)}>
-              {taskProjectOptions.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
-            </select>
-          </label>
-          <label>开始日期
-            <span className="date-slot-field">
-              <input type="date" value={newTaskStartDate} onChange={(event) => setNewTaskStartDate(event.target.value)} />
-              <select value={newTaskStartSlot} onChange={(event) => setNewTaskStartSlot(event.target.value as HalfDaySlot)}>
-                <option>上午</option>
-                <option>下午</option>
+          <div className="task-create-column">
+            <label>
+              所属项目
+              <select value={newTaskProjectId} onChange={(event) => setNewTaskProjectId(event.target.value)}>
+                {taskProjectOptions.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
               </select>
-            </span>
-          </label>
-          <label>截止日期
-            <span className="date-slot-field">
-              <input type="date" value={newTaskDue} onChange={(event) => setNewTaskDue(event.target.value)} />
-              <select value={newTaskDueSlot} onChange={(event) => setNewTaskDueSlot(event.target.value as HalfDaySlot)}>
-                <option>上午</option>
-                <option>下午</option>
-              </select>
-            </span>
-          </label>
-          <div className={newTaskWorkdayResult.hours > 0 ? "workday-estimate-card wide" : "workday-estimate-card wide warning"}>
-            <span>预估工时自动计算</span>
-            <strong>{newTaskWorkdayResult.hours} 小时</strong>
-            <small>{newTaskWorkdayResult.message}</small>
+            </label>
+            <label>开始日期
+              <span className="date-slot-field">
+                <input type="date" value={newTaskStartDate} onChange={(event) => setNewTaskStartDate(event.target.value)} />
+                <select value={newTaskStartSlot} onChange={(event) => setNewTaskStartSlot(event.target.value as HalfDaySlot)}>
+                  <option>上午</option>
+                  <option>下午</option>
+                </select>
+              </span>
+            </label>
+            <label>截止日期
+              <span className="date-slot-field">
+                <input type="date" value={newTaskDue} onChange={(event) => setNewTaskDue(event.target.value)} />
+                <select value={newTaskDueSlot} onChange={(event) => setNewTaskDueSlot(event.target.value as HalfDaySlot)}>
+                  <option>上午</option>
+                  <option>下午</option>
+                </select>
+              </span>
+            </label>
+            <label>任务标题<input value={newTaskTitle} onChange={(event) => setNewTaskTitle(event.target.value)} /></label>
           </div>
-          <label className="wide">任务标题<input value={newTaskTitle} onChange={(event) => setNewTaskTitle(event.target.value)} /></label>
-          <label className="wide">拆分说明 / 留言<textarea value={newTaskNote} onChange={(event) => setNewTaskNote(event.target.value)} /></label>
+          <div className="task-create-column">
+            <div className={newTaskWorkdayResult.hours > 0 ? "workday-estimate-card" : "workday-estimate-card warning"}>
+              <span>预估工时自动计算</span>
+              <strong>{newTaskWorkdayResult.hours} 小时</strong>
+              <small>{newTaskWorkdayResult.message}</small>
+            </div>
+            <label>拆分说明 / 留言<textarea value={newTaskNote} onChange={(event) => setNewTaskNote(event.target.value)} /></label>
+          </div>
         </div>
         <div className="split-actions">
           <button className="btn secondary" onClick={() => setCreatingFrom(null)}>取消</button>
@@ -504,6 +518,62 @@ function matchesDueBucket(due: string, bucket: string) {
   if (bucket === "thisWeek") return dueDate >= today && dueDate < weekEnd;
   if (bucket === "nextWeek") return dueDate >= weekEnd && dueDate < nextWeekEnd;
   return true;
+}
+
+function buildTaskWorkbenchCards(tasks: Task[], projects: Project[]) {
+  const projectById = new Map(projects.map((project) => [project.id, project]));
+  const today = new Date("2026-05-27T00:00:00");
+  const weekStart = new Date("2026-05-25T00:00:00");
+  const weekEnd = new Date("2026-06-01T00:00:00");
+  const dueThisWeek = tasks.filter((task) => {
+    const dueDate = new Date(`${task.due}T00:00:00`);
+    return dueDate >= today && dueDate < weekEnd;
+  });
+  const runningTasks = tasks.filter((task) => task.status === "进行中");
+  const blockedTasks = tasks.filter((task) => ["暂停", "测试中"].includes(task.status));
+  const weekHours = tasks.reduce(
+    (sum, task) =>
+      sum +
+      task.worklogs
+        .filter((log) => {
+          const date = new Date(`${log.date}T00:00:00`);
+          return date >= weekStart && date < weekEnd;
+        })
+        .reduce((subtotal, log) => subtotal + log.hours, 0),
+    0
+  );
+  const estimatedHours = tasks.reduce((sum, task) => sum + task.estimate, 0);
+  const loggedHours = tasks.reduce((sum, task) => sum + task.actual, 0);
+  const worklogRate = estimatedHours > 0 ? Math.min(100, Math.round((loggedHours / estimatedHours) * 100)) : 0;
+  const defectTasks = tasks.filter((task) => task.title.includes("缺陷") || task.description.includes("缺陷") || task.status === "测试中");
+  const highDefects = defectTasks.filter((task) => projectById.get(task.projectId)?.risk === "高" || matchesDueBucket(task.due, "overdue"));
+
+  return [
+    {
+      label: "我的任务",
+      value: String(tasks.length),
+      delta: `${dueThisWeek.length} 个本周截止`,
+      tone: dueThisWeek.length > 0 ? "orange" : "green"
+    },
+    {
+      label: "进行中",
+      value: String(runningTasks.length),
+      delta: `${blockedTasks.length} 个阻塞待确认`,
+      tone: runningTasks.length > 0 ? "blue" : "gray"
+    },
+    {
+      label: "本周工时",
+      value: `${weekHours}h`,
+      delta: `已填报 ${worklogRate}%`,
+      tone: "green"
+    },
+    {
+      label: "验证缺陷",
+      value: String(defectTasks.length),
+      delta: `高优先级 ${highDefects.length} 个`,
+      tone: defectTasks.length > 0 ? "red" : "green"
+    }
+  ] satisfies { label: string; value: string; delta: string; tone: Tone }[];
 }
 
 function scopeTasks(tasks: Task[], projects: Project[], activeRole: RoleId, activeUser: RoleOption) {

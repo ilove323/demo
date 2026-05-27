@@ -59,15 +59,19 @@ export function GanttTimeline({
               </div>
               {group.rows.map((row) => {
                 const laneCount = Math.max(1, ...row.bars.map((bar) => (bar.lane ?? 0) + 1));
+                const labelOnly = !row.subLabel && !row.status && !row.meta;
+                const rowHeight = labelOnly ? (compact ? 48 + laneCount * 24 : 52 + laneCount * 28) : (compact ? 62 + laneCount * 28 : 78 + laneCount * 34);
                 return (
-                  <div className={`gantt-row${selectedBar && row.bars.some((bar) => bar.id === selectedBar.id) ? " selected" : ""}`} key={row.id} style={{ "--row-height": `${compact ? 62 + laneCount * 28 : 78 + laneCount * 34}px` } as CSSProperties}>
+                  <div className={`gantt-row${labelOnly ? " label-only" : ""}${selectedBar && row.bars.some((bar) => bar.id === selectedBar.id) ? " selected" : ""}`} key={row.id} style={{ "--row-height": `${rowHeight}px` } as CSSProperties}>
                     <div className="gantt-row-label">
                       <strong>{row.label}</strong>
-                      <span>{row.subLabel}</span>
-                      <div className="gantt-row-meta">
-                        {row.status ? <StatusTag tone={row.statusTone ?? "gray"}>{row.status}</StatusTag> : null}
-                        {row.meta ? <small>{row.meta}</small> : null}
-                      </div>
+                      {row.subLabel ? <span>{row.subLabel}</span> : null}
+                      {row.status || row.meta ? (
+                        <div className="gantt-row-meta">
+                          {row.status ? <StatusTag tone={row.statusTone ?? "gray"}>{row.status}</StatusTag> : null}
+                          {row.meta ? <small>{row.meta}</small> : null}
+                        </div>
+                      ) : null}
                     </div>
                     <div className="gantt-track">
                       {todayOffset >= 0 && todayOffset <= 100 ? (
