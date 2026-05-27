@@ -1,3 +1,4 @@
+import { projectDeliveryProgress } from "./projectProgress";
 import type { Project, ResourceCalendarEntry, ResourcePerson, Task, Tone } from "./types";
 
 export interface GanttBar {
@@ -45,30 +46,31 @@ export function buildProjectGanttGroups(projects: Project[], tasks: Task[]): Gan
       const range = projectDateRange(project, projectTasks, index + groupIndex);
       const nextMilestone = project.milestones.find((milestone) => milestone.status !== "完成") ?? project.milestones.at(-1);
       const nextMilestoneText = nextMilestone ? `${nextMilestone.name} ${nextMilestone.date}` : "暂无里程碑";
+      const deliveryProgress = projectDeliveryProgress(project);
       return {
         id: project.id,
         label: project.name,
         subLabel: `${project.owner} · ${project.projectType} · ${project.implementation}`,
         status: project.stage,
         statusTone: toneForProjectStage(project.stage),
-        meta: nextMilestone ? `下一节点：${nextMilestone.name} ${nextMilestone.date}` : `${project.progress}%`,
+        meta: nextMilestone ? `下一节点：${nextMilestone.name} ${nextMilestone.date}` : `${deliveryProgress}%`,
         bars: [
           {
             id: `${project.id}-delivery`,
             targetType: "project" as const,
             targetId: project.id,
-            label: `${project.stage} · ${project.progress}%`,
+            label: `${project.stage} · ${deliveryProgress}%`,
             start: range.start,
             end: range.end,
             tone: projectTone(project.id),
-            progress: project.progress,
+            progress: deliveryProgress,
             meta: `${project.id} · ${project.taskIds.length} 个关联任务`,
             detailItems: [
               { label: "项目", value: project.name },
               { label: "阶段", value: project.stage },
               { label: "起止", value: `${range.start} 至 ${range.end}` },
               { label: "负责人", value: project.owner },
-              { label: "进度", value: `${project.progress}%` },
+              { label: "进度", value: `${deliveryProgress}%` },
               { label: "风险", value: `${project.risk} · ${project.riskReason}` },
               { label: "AI 结论", value: `${project.aiScore.recommendation} · ${project.aiScore.total}分` },
               { label: "下一里程碑", value: nextMilestoneText }

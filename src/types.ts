@@ -168,7 +168,7 @@ export interface DeliveryRequest {
   decision: string;
 }
 
-export type FlowLane = "需求方" | "产品经理" | "项目经理" | "开发" | "管理层";
+export type FlowLane = "需求方" | "产品经理" | "项目经理" | "开发";
 export type FlowNodeStatus = "待开始" | "进行中" | "待确认" | "已完成" | "风险";
 
 export interface FlowNode {

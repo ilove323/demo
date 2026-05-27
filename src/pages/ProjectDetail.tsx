@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { DemandProjectFlowBoard } from "../components/DemandProjectFlowBoard";
 import { Modal, ProgressBar, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
 import { projectDependencies, projectRules, resourceCalendars, resourcePeople, supplierBudgets, users } from "../data";
+import { projectDeliveryProgress } from "../projectProgress";
 import { getProjectManagerActions } from "./Projects";
 import type { ContributionItem, DeliveryRequest, Demand, DemandProjectFlow, FlowActionId, FlowActionLog, Project, ProjectActionLog, ProjectStage, ResourceAssignmentPlan, RoleId, RoleOption, Task, TaskPresetFilter } from "../types";
 
@@ -95,6 +96,7 @@ export function ProjectDetail({
       : project.implementation === "外部供应商"
         ? "外部供应商：项目经理选择承接供应商，内部开发仅作为协同或验收支持，不作为主交付。"
         : "合作实现：项目经理同时分配内部开发和外部供应商，泳道会同步显示双方职责。";
+  const deliveryProgress = projectDeliveryProgress(project);
 
   useEffect(() => {
     setRiskDraft(project.riskResponse);
@@ -154,8 +156,8 @@ export function ProjectDetail({
       <div className="detail-summary-grid">
         <article className="summary-tile">
           <span>交付进度</span>
-          <strong>{project.progress}%</strong>
-          <ProgressBar value={project.progress} />
+          <strong>{deliveryProgress}%</strong>
+          <ProgressBar value={deliveryProgress} />
         </article>
         <article className="summary-tile">
           <span>预算使用</span>

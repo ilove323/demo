@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle2, Gauge } from "lucide-react";
 import { dashboardByRole, demands } from "../data";
+import { projectDeliveryProgress } from "../projectProgress";
 import type { DemandProjectFlow, Metric, Project, RoleId, Task, Tone } from "../types";
 import { MetricCard, MiniBarChart, ProgressBar, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
 
@@ -105,7 +106,7 @@ export function Dashboard({
                     <StatusTag tone={toneForStatus(project.risk)}>{project.risk}</StatusTag>
                   </td>
                   <td>
-                    <ProgressBar value={project.progress} />
+                    <ProgressBar value={projectDeliveryProgress(project)} />
                   </td>
                 </tr>
               ))}
@@ -188,7 +189,7 @@ function dashboardTodos(role: RoleId, fallback: string[], projects: Project[], t
       if (unfinished === 0) return [];
       return [{
         title: `推进交付：${project.name}`,
-        detail: `${unfinished} 个任务未完成 · 进度 ${project.progress}% · 风险 ${project.risk}`,
+        detail: `${unfinished} 个任务未完成 · 进度 ${projectDeliveryProgress(project)}% · 风险 ${project.risk}`,
         badge: "推进",
         tone: project.risk === "高" ? "red" as const : project.risk === "中" ? "orange" as const : "blue" as const,
         projectId: project.id
@@ -235,20 +236,21 @@ function ProjectHealthMap({ projects, onOpenProjectDetail }: { projects: Project
       <div className="health-zone danger">失衡</div>
       {projects.map((project) => {
         const budgetRate = Math.min(100, Math.round((project.usedBudget / project.budget) * 100));
+        const deliveryProgress = projectDeliveryProgress(project);
         const size = Math.max(34, Math.min(58, 28 + project.personDays / 4));
         return (
           <button
             className={`health-dot risk-${project.risk}`}
             key={project.id}
             style={{
-              left: `${Math.max(8, Math.min(92, project.progress))}%`,
+              left: `${Math.max(8, Math.min(92, deliveryProgress))}%`,
               bottom: `${Math.max(10, Math.min(88, budgetRate))}%`,
               width: size,
               height: size
             }}
             type="button"
             onClick={() => onOpenProjectDetail(project.id)}
-            title={`${project.name}：进度 ${project.progress}% / 预算 ${budgetRate}% / 风险 ${project.risk}`}
+            title={`${project.name}：进度 ${deliveryProgress}% / 预算 ${budgetRate}% / 风险 ${project.risk}`}
           >
             <strong>{project.id.replace("PRJ-", "")}</strong>
             <span>{project.risk}</span>

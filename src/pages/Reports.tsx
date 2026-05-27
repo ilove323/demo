@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import { demands as seedDemands, projectInvestmentBreakdowns, projects, resourcePeople, supplierBudgets } from "../data";
 import { FilterPanel } from "../components/FilterPanel";
 import { MetricCard, ProgressBar, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
+import { projectDeliveryProgress } from "../projectProgress";
 import type { Demand, DemandProjectFlow, Project, RoleId, RoleOption, Task, Tone } from "../types";
 
 type ReportDomain = "overview" | "project" | "product" | "engineering" | "operations" | "supplier" | "budget";
@@ -430,7 +431,7 @@ function PortfolioHealth({ projects: visibleProjects }: { projects: Project[] })
   const totalBudget = visibleProjects.reduce((sum, project) => sum + project.budget, 0);
   const usedBudget = visibleProjects.reduce((sum, project) => sum + project.usedBudget, 0);
   const completed = visibleProjects.filter((project) => project.stage === "验收完成").length;
-  const avgProgress = Math.round(average(visibleProjects.map((project) => project.progress)));
+  const avgProgress = Math.round(average(visibleProjects.map(projectDeliveryProgress)));
   const avgAi = Math.round(average(visibleProjects.map((project) => project.aiScore.total)));
 
   return (
@@ -591,7 +592,7 @@ function BudgetBurnChart({ projects: visibleProjects, onOpenProjectDetail }: { p
     ? visibleProjects.map((project) => ({
         id: project.id,
         name: shortLabel(project.name),
-        progress: project.progress,
+        progress: projectDeliveryProgress(project),
         usage: percent(project.usedBudget, project.budget),
         risk: project.risk
       }))
@@ -941,7 +942,7 @@ function buildMetrics(
   visibleSuppliers: typeof supplierBudgets,
   visibleInvestments: typeof projectInvestmentBreakdowns
 ): MetricView[] {
-  const completedProjects = visibleProjects.filter((project) => project.stage === "验收完成" || project.progress >= 100).length;
+  const completedProjects = visibleProjects.filter((project) => project.stage === "验收完成" || projectDeliveryProgress(project) >= 100).length;
   const highRiskProjects = visibleProjects.filter((project) => project.risk === "高").length;
   const budgetUsed = visibleProjects.reduce((sum, project) => sum + project.usedBudget, 0);
   const budgetTotal = visibleProjects.reduce((sum, project) => sum + project.budget, 0);
@@ -957,7 +958,7 @@ function buildMetrics(
   if (domain === "project") {
     return [
       { label: "负责项目", value: String(visibleProjects.length), delta: `${highRiskProjects} 个高风险`, tone: highRiskProjects > 0 ? "red" : "blue" },
-      { label: "平均进度", value: `${Math.round(average(visibleProjects.map((project) => project.progress)))}%`, delta: "当前项目推进", tone: "green" },
+      { label: "平均进度", value: `${Math.round(average(visibleProjects.map(projectDeliveryProgress)))}%`, delta: "当前项目推进", tone: "green" },
       { label: "预算偏差均值", value: `${Math.round(average(visibleProjects.map(budgetDeviation)))}%`, delta: "使用率相对进度", tone: "orange" },
       { label: "供应商项目", value: String(visibleProjects.filter((project) => project.implementation !== "内部实现").length), delta: "需跟踪合同与交付", tone: "violet" }
     ];
@@ -1027,7 +1028,7 @@ function buildDetailRows(
       name: project.name,
       projectId: project.id,
       dimension: `产品经理：${productOwnerForProject(project)} · ${project.implementation}`,
-      metric: `进度 ${project.progress}% · 预算 ${percent(project.usedBudget, project.budget)}%`,
+      metric: `进度 ${projectDeliveryProgress(project)}% · 预算 ${percent(project.usedBudget, project.budget)}%`,
       status: project.risk,
       note: projectDeliveryNote(project)
     }));
@@ -1081,7 +1082,7 @@ function buildDetailRows(
     name: project.name,
     projectId: project.id,
     dimension: `${project.projectType} · ${project.implementation}`,
-    metric: `进度 ${project.progress}% · 偏差 ${budgetDeviation(project)}%`,
+    metric: `进度 ${projectDeliveryProgress(project)}% · 偏差 ${budgetDeviation(project)}%`,
     status: project.risk,
     note: projectDeliveryNote(project)
   }));
@@ -1200,7 +1201,7 @@ function resourceRequestStatus(demands: Demand[]) {
   const demandIds = new Set(demands.map((demand) => demand.id));
   return chartDataOrEmpty(
     countBy(projects.filter((project) => demandIds.has(project.demandId)), (project) => {
-      if (project.progress >= 90 || project.stage === "项目验收" || project.stage === "验收完成") return "已安排";
+      if (projectDeliveryProgress(project) >= 90 || project.stage === "项目验收" || project.stage === "验收完成") return "已安排";
       if (project.stage === "项目进行") return "执行中";
       if (project.stage === "项目启动") return "评估中";
       return "待申请";
@@ -1253,7 +1254,7 @@ function acceptanceValueRows(demands: Demand[]) {
 }
 
 function budgetDeviation(project: Project) {
-  return Math.round((project.usedBudget / Math.max(project.budget, 1)) * 100 - project.progress);
+  return Math.round((project.usedBudget / Math.max(project.budget, 1)) * 100 - projectDeliveryProgress(project));
 }
 
 function riskWeight(risk: string) {

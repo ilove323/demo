@@ -14,6 +14,7 @@ import { Reports } from "./pages/Reports";
 import { Resources } from "./pages/Resources";
 import { DepartmentSettings, NotificationSettings, RoleSettings, UserSettings } from "./pages/SystemSettings";
 import { Tasks } from "./pages/Tasks";
+import { projectProgressForStage } from "./projectProgress";
 import type { AcceptanceReview, DeliveryRequest, Demand, DemandAnalysis, DemandProjectFlow, FlowActionId, FlowActionLog, FlowNode, NotificationItem, PageId, Priority, ProfileTab, Project, ProjectActionLog, ProjectStage, ResourceAssignmentPlan, RoleId, RoleOption, Task, TaskPresetFilter, TaskStatus, WorkflowStageId } from "./types";
 
 export default function App() {
@@ -381,7 +382,7 @@ export default function App() {
           ? {
               ...item,
               stage,
-              progress: progressForStage(stage),
+              progress: projectProgressForStage(stage),
               stages: item.stages.map((entry) => ({ ...entry, done: projectStageOrder.indexOf(entry.name) <= projectStageOrder.indexOf(stage) }))
             }
           : item
@@ -700,23 +701,13 @@ function reduceProjectStage(project: Project, stage: ProjectStage): Project {
   return {
     ...project,
     stage,
-    progress: progressForStage(stage),
+    progress: projectProgressForStage(stage),
     stages: project.stages.map((entry) => ({ ...entry, done: projectStageOrder.indexOf(entry.name) <= projectStageOrder.indexOf(stage) }))
   };
 }
 
 function nextProjectStage(stage: ProjectStage): ProjectStage {
   return projectStageOrder[Math.min(projectStageOrder.indexOf(stage) + 1, projectStageOrder.length - 1)];
-}
-
-function progressForStage(stage: ProjectStage) {
-  const map: Record<ProjectStage, number> = {
-    项目启动: 36,
-    项目进行: 68,
-    项目验收: 88,
-    验收完成: 100
-  };
-  return map[stage];
 }
 
 function roleIdsForUsers(userNames: string[]): RoleId[] {

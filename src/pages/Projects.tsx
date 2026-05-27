@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { FilterPanel } from "../components/FilterPanel";
 import { GanttTimeline } from "../components/GanttTimeline";
 import { buildProjectGanttGroups } from "../gantt";
+import { projectDeliveryProgress } from "../projectProgress";
 import type { DeliveryRequest, Demand, DemandProjectFlow, FlowActionId, FlowActionLog, FlowBoardAction, Project, ProjectActionLog, ProjectStage, RoleId, RoleOption, Task, TaskPresetFilter, Tone } from "../types";
 import { ProgressBar, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
 
@@ -227,6 +228,10 @@ export function Projects({
             <tbody>
               {filteredProjects.map((project) => (
                 <tr className="clickable" key={project.id} onClick={() => onOpenDetail(project.id)}>
+                  {(() => {
+                    const deliveryProgress = projectDeliveryProgress(project);
+                    return (
+                      <>
                   <td>
                     <strong>{project.name}</strong>
                     <div className="muted-text">{project.id} · 关联 {project.demandId}</div>
@@ -238,12 +243,15 @@ export function Projects({
                   <td><AiScoreBadge project={project} compact /></td>
                   <td>
                     <div className="progress-cell">
-                      <ProgressBar value={project.progress} />
-                      <span>{project.progress}%</span>
+                      <ProgressBar value={deliveryProgress} />
+                      <span>{deliveryProgress}%</span>
                     </div>
                   </td>
                   <td>{formatMoney(project.usedBudget)} / {formatMoney(project.budget)}<div className="muted-text">来源：需求评审预算</div></td>
                   <td><StatusTag tone={toneForStatus(project.risk)}>{project.risk}</StatusTag></td>
+                      </>
+                    );
+                  })()}
                 </tr>
               ))}
             </tbody>
@@ -252,6 +260,10 @@ export function Projects({
           <div className="entity-card-grid">
             {filteredProjects.map((project) => (
               <button className="entity-card project-card compact-entity-card" key={project.id} onClick={() => onOpenDetail(project.id)}>
+                {(() => {
+                  const deliveryProgress = projectDeliveryProgress(project);
+                  return (
+                    <>
                 <div className="entity-card-head">
                   <span>{project.id} · 关联 {project.demandId}</span>
                   <StatusTag tone={toneForStatus(project.risk)}>{project.risk}</StatusTag>
@@ -269,9 +281,12 @@ export function Projects({
                 </div>
                 <AiScoreBadge project={project} />
                 <div className="progress-cell">
-                  <ProgressBar value={project.progress} />
-                  <span>{project.progress}%</span>
+                  <ProgressBar value={deliveryProgress} />
+                  <span>{deliveryProgress}%</span>
                 </div>
+                    </>
+                  );
+                })()}
               </button>
             ))}
           </div>

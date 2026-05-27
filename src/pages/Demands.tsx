@@ -1,6 +1,7 @@
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Demand, Priority } from "../types";
+import { FilterPanel } from "../components/FilterPanel";
 import { Modal, ProgressBar, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
 
 const priorities: Priority[] = ["P0", "P1", "P2", "P3"];
@@ -20,20 +21,31 @@ export function Demands({
 }) {
   const [status, setStatus] = useState("全部状态");
   const [priority, setPriority] = useState("全部优先级");
+  const [implementation, setImplementation] = useState("全部实现方式");
   const [viewMode, setViewMode] = useState<"list" | "card">("card");
   const [keyword, setKeyword] = useState("");
   const [creating, setCreating] = useState(false);
+
+  const activeFilterCount = [keyword.trim(), status !== "全部状态", priority !== "全部优先级", implementation !== "全部实现方式"].filter(Boolean).length;
 
   const filtered = useMemo(
     () =>
       demands.filter((demand) => {
         const matchStatus = status === "全部状态" || demand.status === status;
         const matchPriority = priority === "全部优先级" || demand.priority === priority;
+        const matchImplementation = implementation === "全部实现方式" || demand.implementation === implementation;
         const matchKeyword = `${demand.name}${demand.team}${demand.handler}`.includes(keyword);
-        return matchStatus && matchPriority && matchKeyword;
+        return matchStatus && matchPriority && matchImplementation && matchKeyword;
       }),
-    [demands, keyword, priority, status]
+    [demands, implementation, keyword, priority, status]
   );
+
+  const resetFilters = () => {
+    setKeyword("");
+    setStatus("全部状态");
+    setPriority("全部优先级");
+    setImplementation("全部实现方式");
+  };
 
   return (
     <section className="page">
@@ -49,24 +61,27 @@ export function Demands({
       </div>
 
       <div className="panel">
-        <div className="filters">
-          <input placeholder="搜索需求、团队、处理人" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
-          <select value={status} onChange={(event) => setStatus(event.target.value)}>
-            {["全部状态", "草稿", "需求评审", "方案确认", "项目启动", "项目进行", "项目验收", "验收完成", "已打回", "已放弃"].map((item) => (
-              <option key={item}>{item}</option>
-            ))}
-          </select>
-          <select value={priority} onChange={(event) => setPriority(event.target.value)}>
-            {["全部优先级", ...priorities].map((item) => (
-              <option key={item}>{item}</option>
-            ))}
-          </select>
-          <select defaultValue="全部实现方式">
-            {["全部实现方式", "内部实现", "外部供应商", "合作实现"].map((item) => (
-              <option key={item}>{item}</option>
-            ))}
-          </select>
-        </div>
+        <FilterPanel title="需求筛选" summary={`显示 ${filtered.length} / ${demands.length} 条需求`} activeCount={activeFilterCount}>
+          <div className="filter-bar">
+            <input placeholder="搜索需求、团队、处理人" value={keyword} onChange={(event) => setKeyword(event.target.value)} />
+            <select value={status} onChange={(event) => setStatus(event.target.value)}>
+              {["全部状态", "草稿", "需求评审", "方案确认", "项目启动", "项目进行", "项目验收", "验收完成", "已打回", "已放弃"].map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </select>
+            <select value={priority} onChange={(event) => setPriority(event.target.value)}>
+              {["全部优先级", ...priorities].map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </select>
+            <select value={implementation} onChange={(event) => setImplementation(event.target.value)}>
+              {["全部实现方式", "内部实现", "外部供应商", "合作实现"].map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </select>
+            <button className="btn secondary" onClick={resetFilters} disabled={activeFilterCount === 0}>清空筛选</button>
+          </div>
+        </FilterPanel>
       </div>
 
       <div className="panel">

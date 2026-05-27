@@ -1,9 +1,8 @@
 import { ChevronDown, PlayCircle, Settings2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { DemandProjectFlow, FlowActionId, FlowActionLog, FlowBoardAction, FlowLane, FlowNode, FlowNodeStatus, RoleId } from "../types";
+import type { DemandProjectFlow, FlowActionId, FlowActionLog, FlowBoardAction, FlowNode, FlowNodeStatus, RoleId } from "../types";
 import { Modal, SectionHeader, StatusTag, toneForStatus } from "./ui";
 
-const lanes: FlowLane[] = ["需求方", "产品经理", "项目经理", "开发", "管理层"];
 const statusOptions: FlowNodeStatus[] = ["待开始", "进行中", "待确认", "已完成", "风险"];
 
 export function DemandProjectFlowBoard({
@@ -119,19 +118,18 @@ export function DemandProjectFlowBoard({
       ) : null}
 
       <div className="flow-board-scroller">
-        <div className="flow-board" style={{ gridTemplateColumns: `132px repeat(${flow.nodes.length}, minmax(178px, 1fr))` }}>
-          <div className="flow-corner">泳道 / 节点</div>
+        <div className="flow-stage-board" style={{ gridTemplateColumns: `repeat(${flow.nodes.length}, minmax(190px, 1fr))` }}>
           {flow.nodes.map((node, index) => (
-            <div className="flow-column-head" key={node.id}>
-              <span>{index + 1}</span>
+            <div className={`flow-stage-head${node.id === flow.currentNodeId ? " current" : ""}`} key={node.id}>
+              <span>阶段 {node.stageNo ?? index}</span>
               <strong>{node.name}</strong>
             </div>
           ))}
-          {lanes.map((lane) => (
-            <FlowLaneRow
-              key={lane}
-              lane={lane}
-              nodes={flow.nodes}
+          {flow.nodes.map((node) => (
+            <FlowStageCard
+              key={node.id}
+              node={node}
+              current={node.id === flow.currentNodeId}
               canConfigure={canConfigure}
               activeRole={activeRole}
               onEdit={setEditing}
@@ -189,7 +187,6 @@ export function DemandProjectFlowBoard({
             <div className="form-grid">
               <label>节点名称<input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
               <label>负责人<input value={draft.owner} onChange={(event) => setDraft({ ...draft, owner: event.target.value })} /></label>
-              <label>所属泳道<select value={draft.lane} onChange={(event) => setDraft({ ...draft, lane: event.target.value as FlowLane })}>{lanes.map((lane) => <option key={lane}>{lane}</option>)}</select></label>
               <label>节点状态<select value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value as FlowNodeStatus })}>{statusOptions.map((status) => <option key={status}>{status}</option>)}</select></label>
               <label className="wide">交付物<input value={draft.deliverable} onChange={(event) => setDraft({ ...draft, deliverable: event.target.value })} /></label>
               <label className="wide">说明<textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
@@ -245,45 +242,38 @@ function groupActions(actions: FlowBoardAction[]) {
   return stages.map((stage) => ({ stage, actions: actions.filter((action) => action.stage === stage) }));
 }
 
-function FlowLaneRow({
-  lane,
-  nodes,
+function FlowStageCard({
+  node,
+  current,
   canConfigure,
   activeRole,
   onEdit
 }: {
-  lane: FlowLane;
-  nodes: FlowNode[];
+  node: FlowNode;
+  current: boolean;
   canConfigure: boolean;
   activeRole: RoleId;
   onEdit: (node: FlowNode) => void;
 }) {
   return (
-    <>
-      <div className="flow-lane-label">{lane}</div>
-      {nodes.map((node) => (
-        <div className="flow-cell" key={`${lane}${node.id}`}>
-          {node.lane === lane ? (
-            <article className={`flow-node-card ${node.status === "风险" ? "risk" : ""}`}>
-              <div className="flow-node-card-head">
-                <span className="flow-node-owner">负责人：<strong>{node.owner}</strong></span>
-                <StatusTag tone={node.status === "风险" ? "red" : toneForStatus(node.status)}>{node.status}</StatusTag>
-              </div>
-              <p>{node.description}</p>
-              {canConfigureNode(activeRole, node, canConfigure) ? (
-                <button className="btn secondary node-config-button" onClick={() => onEdit(node)}>
-                  <Settings2 size={14} /> 节点设置
-                </button>
-              ) : null}
-              <div className="flow-node-deliverable">
-                <span>交付物</span>
-                <strong>{node.deliverable}</strong>
-              </div>
-            </article>
-          ) : null}
+    <div className="flow-stage-cell">
+      <article className={`flow-node-card${node.status === "风险" ? " risk" : ""}${current ? " current" : ""}`}>
+        <div className="flow-node-card-head">
+          <span className="flow-node-owner">负责人：<strong>{node.owner}</strong></span>
+          <StatusTag tone={node.status === "风险" ? "red" : toneForStatus(node.status)}>{node.status}</StatusTag>
         </div>
-      ))}
-    </>
+        <p>{node.description}</p>
+        {canConfigureNode(activeRole, node, canConfigure) ? (
+          <button className="btn secondary node-config-button" onClick={() => onEdit(node)}>
+            <Settings2 size={14} /> 节点设置
+          </button>
+        ) : null}
+        <div className="flow-node-deliverable">
+          <span>交付物</span>
+          <strong>{node.deliverable}</strong>
+        </div>
+      </article>
+    </div>
   );
 }
 
