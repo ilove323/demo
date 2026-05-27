@@ -1,0 +1,117 @@
+<style>
+  .resource-options { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:18px; }
+  .resource-card { border:1px solid #d8dee8; border-radius:10px; background:#fff; overflow:hidden; cursor:pointer; transition:.16s ease; }
+  .resource-card:hover { border-color:#3157d5; box-shadow:0 10px 28px rgba(20,38,80,.12); transform:translateY(-1px); }
+  .viz { height:320px; background:#f6f8fb; border-bottom:1px solid #e6ebf2; padding:14px; }
+  .panel { height:100%; background:#fff; border:1px solid #e3e9f2; border-radius:8px; padding:12px; box-sizing:border-box; }
+  .title { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; font-size:11px; color:#1f2937; font-weight:700; }
+  .seg { display:flex; gap:3px; }
+  .seg i { width:28px; height:10px; background:#dfe6f2; border-radius:10px; }
+  .seg i:first-child { background:#3157d5; }
+  .matrix { display:grid; grid-template-columns:70px 1fr 1fr; gap:8px 10px; align-items:center; }
+  .dept { font-size:10px; color:#334155; white-space:nowrap; }
+  .track { height:12px; background:#edf2f7; border-radius:10px; position:relative; }
+  .people { position:absolute; left:0; top:0; bottom:0; border-radius:10px; background:#3157d5; }
+  .money { position:absolute; left:0; top:0; bottom:0; border-radius:10px; background:#12a594; }
+  .target { position:absolute; top:-2px; bottom:-2px; width:2px; background:#ef4444; }
+  .axis { display:grid; grid-template-columns:70px 1fr 1fr; gap:8px 10px; margin-bottom:6px; font-size:8px; color:#718096; }
+  .donut-wrap { display:flex; gap:14px; align-items:center; height:118px; }
+  .donut { width:110px; height:110px; border-radius:50%; background:conic-gradient(#3157d5 0 34%, #12a594 34% 56%, #f0a43a 56% 74%, #8b5cf6 74% 88%, #94a3b8 88% 100%); position:relative; flex:none; }
+  .donut:after { content:""; position:absolute; inset:24px; background:white; border-radius:50%; box-shadow:inset 0 0 0 1px #e5e7eb; }
+  .legend { flex:1; }
+  .legend div { display:flex; align-items:center; gap:6px; margin:7px 0; font-size:10px; color:#475569; }
+  .dot { width:8px; height:8px; border-radius:50%; background:#3157d5; }
+  .bubble-area { height:150px; border-left:1px solid #d7dee9; border-bottom:1px solid #d7dee9; margin:16px 6px 0 12px; position:relative; }
+  .bubble { position:absolute; border-radius:50%; background:rgba(49,87,213,.28); border:2px solid #3157d5; display:flex; align-items:center; justify-content:center; font-size:8px; color:#1f3a8a; font-weight:700; }
+  .b2 { background:rgba(18,165,148,.25); border-color:#12a594; color:#065f5b; }
+  .b3 { background:rgba(240,164,58,.25); border-color:#f0a43a; color:#8a4b08; }
+  .b4 { background:rgba(239,68,68,.20); border-color:#ef4444; color:#991b1b; }
+  .split { display:grid; grid-template-columns:1.05fr .95fr; gap:12px; height:235px; }
+  .bars { display:flex; align-items:end; gap:11px; height:150px; padding:12px 4px 0; border-bottom:1px solid #d7dee9; }
+  .stack { width:24px; display:flex; flex-direction:column-reverse; border-radius:5px 5px 0 0; overflow:hidden; }
+  .stack i:nth-child(1){ background:#3157d5; } .stack i:nth-child(2){ background:#12a594; } .stack i:nth-child(3){ background:#f0a43a; }
+  .spark { height:36px; display:flex; align-items:end; gap:4px; margin-top:10px; }
+  .spark i { flex:1; background:#cbd5e1; border-radius:3px 3px 0 0; }
+  .body { padding:14px 16px 16px; }
+  .choice-tag { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:#1f4fd8; color:#fff; font-weight:700; font-size:12px; margin-right:8px; }
+  h3 { margin:0 0 6px; font-size:16px; }
+  p { margin:0; color:#607089; font-size:13px; line-height:1.45; }
+</style>
+
+<h2>资源投入图表：人和钱怎么表达最专业？</h2>
+<p class="subtitle">请选择资源模块的默认展示。它仍然支持切换部门筛选和饼图/其他视图，但默认图表决定董事长第一眼看到的判断口径。</p>
+
+<div class="resource-options">
+  <div class="resource-card" data-choice="resource-a" onclick="toggleSelect(this)">
+    <div class="viz">
+      <div class="panel">
+        <div class="title">资源投入强度：人力 vs 预算 <span class="seg"><i></i><i></i><i></i></span></div>
+        <div class="axis"><span></span><span>人力利用率</span><span>预算执行率</span></div>
+        <div class="matrix">
+          <span class="dept">营销中心</span><div class="track"><i class="people" style="width:112%"></i><i class="target" style="left:100%"></i></div><div class="track"><i class="money" style="width:87%"></i><i class="target" style="left:92%"></i></div>
+          <span class="dept">供应链</span><div class="track"><i class="people" style="width:94%"></i><i class="target" style="left:100%"></i></div><div class="track"><i class="money" style="width:103%"></i><i class="target" style="left:92%"></i></div>
+          <span class="dept">财务共享</span><div class="track"><i class="people" style="width:76%"></i><i class="target" style="left:100%"></i></div><div class="track"><i class="money" style="width:64%"></i><i class="target" style="left:92%"></i></div>
+          <span class="dept">采购管理</span><div class="track"><i class="people" style="width:121%"></i><i class="target" style="left:100%"></i></div><div class="track"><i class="money" style="width:96%"></i><i class="target" style="left:92%"></i></div>
+          <span class="dept">高管驾驶舱</span><div class="track"><i class="people" style="width:88%"></i><i class="target" style="left:100%"></i></div><div class="track"><i class="money" style="width:73%"></i><i class="target" style="left:92%"></i></div>
+          <span class="dept">门店运营</span><div class="track"><i class="people" style="width:108%"></i><i class="target" style="left:100%"></i></div><div class="track"><i class="money" style="width:118%"></i><i class="target" style="left:92%"></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="body"><h3><span class="choice-tag">A</span>子弹图矩阵</h3><p>推荐。每个部门同时看人力利用率、预算执行率和目标线，最适合判断“哪里超载、哪里花钱快”。</p></div>
+  </div>
+
+  <div class="resource-card" data-choice="resource-b" onclick="toggleSelect(this)">
+    <div class="viz">
+      <div class="panel">
+        <div class="title">资源结构占比 <span class="seg"><i></i><i></i><i></i></span></div>
+        <div class="donut-wrap">
+          <div class="donut"></div>
+          <div class="legend">
+            <div><i class="dot"></i>营销中心 34%</div>
+            <div><i class="dot" style="background:#12a594"></i>供应链 22%</div>
+            <div><i class="dot" style="background:#f0a43a"></i>财务共享 18%</div>
+            <div><i class="dot" style="background:#8b5cf6"></i>采购管理 14%</div>
+            <div><i class="dot" style="background:#94a3b8"></i>其他 12%</div>
+          </div>
+        </div>
+        <div class="bubble-area">
+          <i class="bubble" style="left:8%;bottom:35%;width:44px;height:44px;">营销</i>
+          <i class="bubble b2" style="left:38%;bottom:52%;width:34px;height:34px;">供应</i>
+          <i class="bubble b3" style="left:62%;bottom:18%;width:52px;height:52px;">门店</i>
+          <i class="bubble b4" style="left:78%;bottom:68%;width:28px;height:28px;">采购</i>
+        </div>
+      </div>
+    </div>
+    <div class="body"><h3><span class="choice-tag">B</span>占比 + 气泡</h3><p>更直观展示部门占比和项目规模，适合“资源都投到哪了”；但不如 A 能清楚表达目标偏差。</p></div>
+  </div>
+
+  <div class="resource-card" data-choice="resource-c" onclick="toggleSelect(this)">
+    <div class="viz">
+      <div class="panel">
+        <div class="title">投入趋势与部门堆叠 <span class="seg"><i></i><i></i><i></i></span></div>
+        <div class="split">
+          <div>
+            <div class="bars">
+              <div class="stack" style="height:80px"><i style="height:34px"></i><i style="height:26px"></i><i style="height:20px"></i></div>
+              <div class="stack" style="height:98px"><i style="height:44px"></i><i style="height:30px"></i><i style="height:24px"></i></div>
+              <div class="stack" style="height:128px"><i style="height:58px"></i><i style="height:38px"></i><i style="height:32px"></i></div>
+              <div class="stack" style="height:112px"><i style="height:50px"></i><i style="height:34px"></i><i style="height:28px"></i></div>
+              <div class="stack" style="height:145px"><i style="height:65px"></i><i style="height:44px"></i><i style="height:36px"></i></div>
+              <div class="stack" style="height:124px"><i style="height:54px"></i><i style="height:42px"></i><i style="height:28px"></i></div>
+            </div>
+            <div class="spark"><i style="height:12px"></i><i style="height:22px"></i><i style="height:18px"></i><i style="height:28px"></i><i style="height:24px"></i><i style="height:33px;background:#ef4444"></i></div>
+          </div>
+          <div>
+            <div class="matrix" style="grid-template-columns:60px 1fr; gap:8px">
+              <span class="dept">营销</span><div class="track"><i class="people" style="width:82%"></i></div>
+              <span class="dept">供应链</span><div class="track"><i class="people" style="width:66%;background:#12a594"></i></div>
+              <span class="dept">财务</span><div class="track"><i class="people" style="width:48%;background:#f0a43a"></i></div>
+              <span class="dept">采购</span><div class="track"><i class="people" style="width:58%;background:#8b5cf6"></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="body"><h3><span class="choice-tag">C</span>趋势堆叠图</h3><p>适合观察资源投入走势和月度变化。作为二级视图很好，但默认页会挤占甘特和风险的空间。</p></div>
+  </div>
+</div>

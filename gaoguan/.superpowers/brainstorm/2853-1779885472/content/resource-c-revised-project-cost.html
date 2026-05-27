@@ -1,0 +1,131 @@
+<style>
+  .wrap { max-width:1180px; margin:0 auto; }
+  .preview { background:#f5f7fb; border:1px solid #d9e1ef; border-radius:10px; padding:14px; }
+  .module { display:grid; grid-template-rows:34px 240px 300px; gap:12px; }
+  .toolbar { display:flex; align-items:center; justify-content:space-between; color:#233044; }
+  .filters { display:flex; gap:6px; align-items:center; }
+  .pill { height:24px; min-width:66px; padding:0 10px; border-radius:12px; background:#e7ecf5; color:#56647a; font-size:12px; display:flex; align-items:center; justify-content:center; }
+  .pill.active { background:#1f4fd8; color:white; }
+  .panel { background:#fff; border:1px solid #e1e8f2; border-radius:8px; padding:14px; overflow:hidden; }
+  .head { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:12px; }
+  .head h3 { margin:0; font-size:15px; color:#111827; }
+  .head p { margin:4px 0 0; color:#738198; font-size:12px; }
+  .kpis { display:flex; gap:8px; }
+  .kpi { border:1px solid #e8edf5; background:#f8fafc; border-radius:6px; padding:7px 10px; min-width:82px; }
+  .kpi b { display:block; color:#111827; font-size:15px; line-height:1; }
+  .kpi span { color:#738198; font-size:11px; }
+  .heat { display:grid; grid-template-columns:88px repeat(5, 1fr); gap:5px; align-items:center; }
+  .label { color:#334155; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .week { color:#738198; font-size:11px; text-align:center; }
+  .cell { height:24px; border-radius:5px; background:#e8eef6; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:10px; }
+  .cell.g { background:#bfe7dd; color:#075e55; }
+  .cell.m { background:#f8d287; color:#8a4b08; }
+  .cell.h { background:#f07a68; color:#7f1d1d; font-weight:700; }
+  .cost-grid { display:grid; grid-template-columns:1.28fr .72fr; gap:14px; height:220px; }
+  .project-chart { display:grid; grid-template-columns:118px 1fr 72px 72px; gap:8px 10px; align-items:center; }
+  .subhead { color:#738198; font-size:11px; }
+  .project { color:#243044; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .barline { height:18px; background:#eef2f7; border-radius:10px; position:relative; overflow:hidden; }
+  .budget { position:absolute; inset:0 auto 0 0; width:100%; background:transparent; border-right:2px solid #111827; opacity:.75; }
+  .actual { position:absolute; left:0; top:3px; bottom:3px; border-radius:8px; background:#1f4fd8; }
+  .forecast { position:absolute; left:0; top:11px; height:4px; border-radius:6px; background:#f0a43a; }
+  .over .actual { background:#ef4444; }
+  .money { font-size:12px; color:#111827; text-align:right; }
+  .risk { font-size:11px; text-align:center; border-radius:10px; padding:3px 6px; background:#e8f5ef; color:#08775f; }
+  .risk.warn { background:#fff4db; color:#925b00; }
+  .risk.bad { background:#ffe8e5; color:#a12118; }
+  .quadrant { border-left:1px solid #d7dee9; border-bottom:1px solid #d7dee9; height:178px; margin:20px 8px 0 16px; position:relative; background:linear-gradient(to right, transparent 49%, #eef2f7 49% 50%, transparent 50%), linear-gradient(to bottom, transparent 49%, #eef2f7 49% 50%, transparent 50%); }
+  .axis-x, .axis-y { position:absolute; color:#738198; font-size:10px; }
+  .axis-x { right:0; bottom:-18px; }
+  .axis-y { left:-16px; top:-16px; }
+  .bubble { position:absolute; border-radius:50%; background:rgba(31,79,216,.18); border:2px solid #1f4fd8; color:#1f3a8a; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .bubble.warn { background:rgba(240,164,58,.22); border-color:#f0a43a; color:#7a4a00; }
+  .bubble.bad { background:rgba(239,68,68,.18); border-color:#ef4444; color:#991b1b; }
+  .note { margin-top:12px; display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; }
+  .note div { background:#f8fafc; border:1px solid #e8edf5; border-radius:6px; padding:8px; color:#475569; font-size:12px; }
+  .note b { color:#111827; }
+</style>
+
+<div class="wrap">
+  <h2>已按你的方向重做：人力热力图 + 项目级资金投入</h2>
+  <p class="subtitle">保留第三种的人力部门热力图；费用不再做简单分类占比，改为“按项目看投入、预算偏差、预测超支和投入产出风险”。</p>
+
+  <div class="preview">
+    <div class="module">
+      <div class="toolbar">
+        <strong>资源投入情况</strong>
+        <div class="filters">
+          <span class="pill active">全部部门</span>
+          <span class="pill">营销中心</span>
+          <span class="pill">供应链</span>
+          <span class="pill">财务共享</span>
+          <span class="pill">按项目</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="head">
+          <div>
+            <h3>人力投入：部门 × 本月周负荷热力</h3>
+            <p>颜色代表产能占用：绿色健康，黄色紧张，红色超载；点击部门后联动下方项目资金。</p>
+          </div>
+          <div class="kpis">
+            <div class="kpi"><b>186</b><span>投入人月</span></div>
+            <div class="kpi"><b>112%</b><span>峰值负荷</span></div>
+            <div class="kpi"><b>7</b><span>超载部门</span></div>
+          </div>
+        </div>
+        <div class="heat">
+          <span></span><span class="week">第1周</span><span class="week">第2周</span><span class="week">第3周</span><span class="week">第4周</span><span class="week">第5周</span>
+          <span class="label">营销中心</span><span class="cell g">82%</span><span class="cell m">96%</span><span class="cell h">113%</span><span class="cell h">118%</span><span class="cell m">101%</span>
+          <span class="label">供应链</span><span class="cell">74%</span><span class="cell g">85%</span><span class="cell m">94%</span><span class="cell m">98%</span><span class="cell">79%</span>
+          <span class="label">采购管理</span><span class="cell m">92%</span><span class="cell h">109%</span><span class="cell h">121%</span><span class="cell m">97%</span><span class="cell">81%</span>
+          <span class="label">财务共享</span><span class="cell">66%</span><span class="cell">73%</span><span class="cell g">84%</span><span class="cell m">92%</span><span class="cell">76%</span>
+          <span class="label">门店运营</span><span class="cell m">99%</span><span class="cell h">116%</span><span class="cell h">124%</span><span class="cell h">119%</span><span class="cell m">103%</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="head">
+          <div>
+            <h3>资金投入：项目级预算执行与预测偏差</h3>
+            <p>每行一个项目：蓝/红条为已投入，黄线为完工预测，黑线为预算上限；右侧气泡看“交付进度 vs 预算消耗”。</p>
+          </div>
+          <div class="kpis">
+            <div class="kpi"><b>¥4,280万</b><span>年度预算</span></div>
+            <div class="kpi"><b>¥2,760万</b><span>已投入</span></div>
+            <div class="kpi"><b>+¥318万</b><span>预测超支</span></div>
+          </div>
+        </div>
+
+        <div class="cost-grid">
+          <div class="project-chart">
+            <span class="subhead">项目</span><span class="subhead">预算执行</span><span class="subhead" style="text-align:right;">已投入</span><span class="subhead" style="text-align:center;">风险</span>
+            <span class="project">CRM 会员增长平台</span><div class="barline over"><i class="actual" style="width:86%"></i><i class="forecast" style="width:112%"></i><i class="budget"></i></div><span class="money">¥620万</span><span class="risk bad">超支</span>
+            <span class="project">供应链计划中台</span><div class="barline"><i class="actual" style="width:58%"></i><i class="forecast" style="width:88%"></i><i class="budget"></i></div><span class="money">¥410万</span><span class="risk">正常</span>
+            <span class="project">门店智能补货</span><div class="barline over"><i class="actual" style="width:72%"></i><i class="forecast" style="width:124%"></i><i class="budget"></i></div><span class="money">¥530万</span><span class="risk bad">失控</span>
+            <span class="project">财务共享自动化</span><div class="barline"><i class="actual" style="width:44%"></i><i class="forecast" style="width:76%"></i><i class="budget"></i></div><span class="money">¥260万</span><span class="risk">节余</span>
+            <span class="project">采购风控模型</span><div class="barline"><i class="actual" style="width:68%"></i><i class="forecast" style="width:97%"></i><i class="budget"></i></div><span class="money">¥310万</span><span class="risk warn">临界</span>
+          </div>
+
+          <div>
+            <div class="quadrant">
+              <span class="axis-y">预算消耗高</span><span class="axis-x">交付进度高</span>
+              <span class="bubble bad" style="left:28%;bottom:64%;width:50px;height:50px;">CRM</span>
+              <span class="bubble" style="left:68%;bottom:38%;width:42px;height:42px;">供应</span>
+              <span class="bubble bad" style="left:38%;bottom:72%;width:58px;height:58px;">门店</span>
+              <span class="bubble" style="left:72%;bottom:20%;width:34px;height:34px;">财务</span>
+              <span class="bubble warn" style="left:54%;bottom:54%;width:38px;height:38px;">采购</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="note">
+          <div><b>看投入排名：</b>哪些项目占用资金最多。</div>
+          <div><b>看预算偏差：</b>哪些项目预测突破预算线。</div>
+          <div><b>看钱效匹配：</b>高消耗低进度项目自动进入风险解读。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

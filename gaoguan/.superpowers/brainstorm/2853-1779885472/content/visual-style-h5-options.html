@@ -1,0 +1,176 @@
+<style>
+  .style-wrap { max-width: 1360px; margin: 0 auto; }
+  .research { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:12px 0 18px; }
+  .research div { background:#fff; border:1px solid #e5eaf2; border-radius:8px; padding:10px 12px; color:#4d5a6f; font-size:12px; line-height:1.45; }
+  .research b { display:block; color:#111827; margin-bottom:3px; font-size:13px; }
+  .options { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }
+  .option-card { border:1px solid #d7deea; border-radius:10px; background:#fff; overflow:hidden; cursor:pointer; transition:.18s ease; }
+  .option-card:hover { transform:translateY(-1px); border-color:#2f66ff; box-shadow:0 18px 45px rgba(15,23,42,.16); }
+  .preview { height:520px; padding:12px; border-bottom:1px solid #e5eaf2; display:grid; grid-template-columns:1fr 172px; gap:10px; }
+  .desktop, .phone { border-radius:12px; overflow:hidden; position:relative; }
+  .desktop { padding:12px; }
+  .phone { border:5px solid #111827; box-shadow:0 8px 24px rgba(0,0,0,.18); }
+  .phone-screen { height:100%; padding:10px; overflow:hidden; }
+  .top { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .title strong { display:block; font-size:13px; letter-spacing:0; }
+  .title span { display:block; font-size:8px; margin-top:2px; opacity:.72; }
+  .chips { display:flex; gap:5px; }
+  .chip { height:16px; min-width:34px; border-radius:10px; opacity:.9; }
+  .kpis { display:grid; grid-template-columns:repeat(6,1fr); gap:7px; margin-bottom:9px; }
+  .kpi { border-radius:7px; padding:8px; min-height:54px; }
+  .kpi span { display:block; font-size:8px; opacity:.72; }
+  .kpi b { display:block; font-size:17px; line-height:1; margin-top:8px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:132px 132px 150px; gap:8px; }
+  .panel { border-radius:8px; padding:9px; overflow:hidden; }
+  .panel h5 { margin:0 0 8px; font-size:10px; font-weight:700; }
+  .funnel { display:flex; flex-direction:column; align-items:center; gap:4px; margin-top:10px; }
+  .stage { height:16px; border-radius:3px; }
+  .s1 { width:88%; } .s2 { width:66%; } .s3 { width:46%; }
+  .heat { display:grid; grid-template-columns:44px repeat(5,1fr); gap:3px; align-items:center; }
+  .cell { height:13px; border-radius:3px; }
+  .barline { height:10px; border-radius:8px; position:relative; overflow:hidden; margin:6px 0; }
+  .barline i { position:absolute; left:0; top:2px; bottom:2px; border-radius:8px; }
+  .gantt-row { display:grid; grid-template-columns:54px 1fr 24px; gap:4px; align-items:center; margin:7px 0; }
+  .label { height:7px; border-radius:8px; }
+  .line { height:10px; border-radius:8px; position:relative; overflow:hidden; }
+  .task { position:absolute; top:2px; height:6px; border-radius:8px; }
+  .insight { border-radius:6px; padding:7px; margin:7px 0; border-left:3px solid; }
+  .insight b { display:block; font-size:9px; margin-bottom:4px; }
+  .insight span { display:block; font-size:7px; line-height:1.35; opacity:.78; }
+  .phone .top { margin-bottom:8px; }
+  .phone-kpis { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:8px; }
+  .phone .kpi { min-height:44px; padding:7px; }
+  .phone .kpi b { font-size:15px; margin-top:6px; }
+  .phone-tabs { display:flex; gap:5px; margin:8px 0; }
+  .phone-tabs i { height:18px; flex:1; border-radius:10px; }
+  .phone-card { border-radius:8px; padding:8px; margin-bottom:8px; }
+  .body { padding:14px 16px 16px; }
+  .tag { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:#1f4fd8; color:#fff; font-weight:700; font-size:12px; margin-right:8px; }
+  h3 { margin:0 0 6px; font-size:16px; }
+  p { margin:0; color:#607089; font-size:13px; line-height:1.45; }
+
+  .a .preview { background:#0a1020; }
+  .a .desktop { background:radial-gradient(circle at 20% 0%, rgba(47,102,255,.20), transparent 34%), #0c1324; color:#e6edf8; }
+  .a .phone-screen { background:#0c1324; color:#e6edf8; }
+  .a .chip,.a .phone-tabs i:first-child { background:#2f66ff; }
+  .a .phone-tabs i { background:#1b2944; }
+  .a .kpi,.a .panel,.a .phone-card { background:#111b30; border:1px solid rgba(142,162,198,.20); box-shadow:inset 0 1px 0 rgba(255,255,255,.04); }
+  .a .kpi b { color:#f6f8ff; }
+  .a .stage,.a .barline i,.a .task { background:#2f66ff; }
+  .a .s2,.a .task.green { background:#18b7a4; } .a .s3,.a .task.warn { background:#f2b84b; }
+  .a .cell { background:#1b2944; } .a .cell.m { background:#806328; } .a .cell.h { background:#8d2f35; }
+  .a .barline,.a .line,.a .label { background:#1b2944; }
+  .a .insight { background:#141f35; border-color:#ff5d55; }
+
+  .b .preview { background:#eef2f6; }
+  .b .desktop { background:#f7f9fc; color:#172033; }
+  .b .phone-screen { background:#f7f9fc; color:#172033; }
+  .b .chip,.b .phone-tabs i:first-child { background:#244c7f; }
+  .b .phone-tabs i { background:#dbe3ee; }
+  .b .kpi,.b .panel,.b .phone-card { background:#fff; border:1px solid #dfe6ef; box-shadow:0 4px 14px rgba(15,23,42,.05); }
+  .b .kpi b { color:#172033; }
+  .b .stage,.b .barline i,.b .task { background:#244c7f; }
+  .b .s2,.b .task.green { background:#3b8a7e; } .b .s3,.b .task.warn { background:#b9822a; }
+  .b .cell { background:#e9eef5; } .b .cell.m { background:#ecd29c; } .b .cell.h { background:#e9a19a; }
+  .b .barline,.b .line,.b .label { background:#e7ecf3; }
+  .b .insight { background:#fff; border-color:#b4443c; }
+
+  .c .preview { background:#111; }
+  .c .desktop { background:linear-gradient(135deg,#121212,#1c1a17); color:#efe7d5; }
+  .c .phone-screen { background:#151411; color:#efe7d5; }
+  .c .chip,.c .phone-tabs i:first-child { background:#c6a15b; }
+  .c .phone-tabs i { background:#2d2922; }
+  .c .kpi,.c .panel,.c .phone-card { background:#201d18; border:1px solid rgba(198,161,91,.24); box-shadow:inset 0 1px 0 rgba(255,255,255,.04); }
+  .c .kpi b { color:#fff5de; }
+  .c .stage,.c .barline i,.c .task { background:#c6a15b; }
+  .c .s2,.c .task.green { background:#3d8f7a; } .c .s3,.c .task.warn { background:#d28a45; }
+  .c .cell { background:#2d2922; } .c .cell.m { background:#735828; } .c .cell.h { background:#79383a; }
+  .c .barline,.c .line,.c .label { background:#2d2922; }
+  .c .insight { background:#27231c; border-color:#d65f55; }
+</style>
+
+<div class="style-wrap">
+  <h2>重新定视觉风格：桌面驾驶舱 + H5 手机版</h2>
+  <p class="subtitle">排版沿用你认可的版本，只换视觉气质，并追加手机端 H5。桌面用于会议室/电脑，H5 用单列摘要和横向 Tab，不硬缩桌面。</p>
+
+  <div class="research">
+    <div><b>高管优先</b>关键 KPI 放在首屏最上方，异常优先，不把详情塞满首页。</div>
+    <div><b>少而准</b>首页控制图表数量，颜色只服务状态：正常、临界、风险、重点。</div>
+    <div><b>移动独立</b>手机只保留经常看的关键图，单列纵向，不复制桌面布局。</div>
+    <div><b>管理语言</b>风险区不做日志，直接写“影响、原因、建议动作”。</div>
+  </div>
+
+  <div class="options">
+    <div class="option-card a" data-choice="style-a" onclick="toggleSelect(this)">
+      <div class="preview">
+        <div class="desktop">
+          <div class="top"><div class="title"><strong>IT 项目管理董事长驾驶舱</strong><span>本月 · 全部部门 · 2026-05-27</span></div><div class="chips"><i class="chip"></i><i class="chip"></i><i class="chip"></i></div></div>
+          <div class="kpis"><div class="kpi"><span>需求</span><b>326</b></div><div class="kpi"><span>接收</span><b>248</b></div><div class="kpi"><span>完成</span><b>173</b></div><div class="kpi"><span>人月</span><b>186</b></div><div class="kpi"><span>投入</span><b>2760万</b></div><div class="kpi"><span>风险</span><b>9</b></div></div>
+          <div class="grid">
+            <div class="panel"><h5>需求承接</h5><div class="funnel"><i class="stage s1"></i><i class="stage s2"></i><i class="stage s3"></i></div></div>
+            <div class="panel"><h5>人力负荷</h5><div class="heat"><i></i><i class="cell"></i><i class="cell m"></i><i class="cell h"></i><i class="cell h"></i><i class="cell m"></i><i></i><i class="cell"></i><i class="cell"></i><i class="cell m"></i><i class="cell"></i><i class="cell"></i></div></div>
+            <div class="panel"><h5>项目资金</h5><div class="barline"><i style="width:86%"></i></div><div class="barline"><i style="width:58%;background:#18b7a4"></i></div><div class="barline"><i style="width:72%;background:#ff5d55"></i></div></div>
+            <div class="panel"><h5>交付路线图</h5><div class="gantt-row"><i class="label"></i><div class="line"><i class="task" style="left:8%;width:58%"></i></div><i class="label"></i></div><div class="gantt-row"><i class="label"></i><div class="line"><i class="task green" style="left:16%;width:52%"></i></div><i class="label"></i></div></div>
+            <div class="panel" style="grid-column:1/3;"><h5>风险解读</h5><div class="insight"><b>门店智能补货进入高投入低进度象限</b><span>建议暂停新增范围，先完成核心链路验收。</span></div><div class="insight"><b>营销中心需求缺口挤压 CRM 交付</b><span>建议调减低价值需求或补充临时外包。</span></div></div>
+          </div>
+        </div>
+        <div class="phone"><div class="phone-screen">
+          <div class="top"><div class="title"><strong>董事长驾驶舱</strong><span>本月 · 全部部门</span></div></div>
+          <div class="phone-kpis"><div class="kpi"><span>完成</span><b>173</b></div><div class="kpi"><span>高风险</span><b>9</b></div><div class="kpi"><span>人力峰值</span><b>112%</b></div><div class="kpi"><span>超支预测</span><b>318万</b></div></div>
+          <div class="phone-tabs"><i></i><i></i><i></i><i></i></div>
+          <div class="phone-card"><div class="funnel"><i class="stage s1"></i><i class="stage s2"></i><i class="stage s3"></i></div></div>
+          <div class="phone-card"><div class="gantt-row"><i class="label"></i><div class="line"><i class="task" style="left:12%;width:62%"></i></div><i></i></div><div class="gantt-row"><i class="label"></i><div class="line"><i class="task warn" style="left:42%;width:42%"></i></div><i></i></div></div>
+          <div class="phone-card"><div class="insight"><b>需拍板 3 项</b><span>门店补货、CRM、人力调配。</span></div></div>
+        </div></div>
+      </div>
+      <div class="body"><h3><span class="tag">A</span>深色指挥中心</h3><p>推荐。更像高管驾驶舱：克制深色、蓝青为主、红黄只给风险。会议室大屏和手机都稳。</p></div>
+    </div>
+
+    <div class="option-card b" data-choice="style-b" onclick="toggleSelect(this)">
+      <div class="preview">
+        <div class="desktop">
+          <div class="top"><div class="title"><strong>IT 项目管理董事长驾驶舱</strong><span>本月 · 全部部门 · 2026-05-27</span></div><div class="chips"><i class="chip"></i><i class="chip"></i><i class="chip"></i></div></div>
+          <div class="kpis"><div class="kpi"><span>需求</span><b>326</b></div><div class="kpi"><span>接收</span><b>248</b></div><div class="kpi"><span>完成</span><b>173</b></div><div class="kpi"><span>人月</span><b>186</b></div><div class="kpi"><span>投入</span><b>2760万</b></div><div class="kpi"><span>风险</span><b>9</b></div></div>
+          <div class="grid">
+            <div class="panel"><h5>需求承接</h5><div class="funnel"><i class="stage s1"></i><i class="stage s2"></i><i class="stage s3"></i></div></div>
+            <div class="panel"><h5>人力负荷</h5><div class="heat"><i></i><i class="cell"></i><i class="cell m"></i><i class="cell h"></i><i class="cell h"></i><i class="cell m"></i><i></i><i class="cell"></i><i class="cell"></i><i class="cell m"></i><i class="cell"></i><i class="cell"></i></div></div>
+            <div class="panel"><h5>项目资金</h5><div class="barline"><i style="width:86%"></i></div><div class="barline"><i style="width:58%;background:#3b8a7e"></i></div><div class="barline"><i style="width:72%;background:#b4443c"></i></div></div>
+            <div class="panel"><h5>交付路线图</h5><div class="gantt-row"><i class="label"></i><div class="line"><i class="task" style="left:8%;width:58%"></i></div><i class="label"></i></div><div class="gantt-row"><i class="label"></i><div class="line"><i class="task green" style="left:16%;width:52%"></i></div><i class="label"></i></div></div>
+            <div class="panel" style="grid-column:1/3;"><h5>风险解读</h5><div class="insight"><b>门店智能补货进入高投入低进度象限</b><span>建议暂停新增范围，先完成核心链路验收。</span></div><div class="insight"><b>营销中心需求缺口挤压 CRM 交付</b><span>建议调减低价值需求或补充临时外包。</span></div></div>
+          </div>
+        </div>
+        <div class="phone"><div class="phone-screen">
+          <div class="top"><div class="title"><strong>董事长驾驶舱</strong><span>本月 · 全部部门</span></div></div>
+          <div class="phone-kpis"><div class="kpi"><span>完成</span><b>173</b></div><div class="kpi"><span>高风险</span><b>9</b></div><div class="kpi"><span>人力峰值</span><b>112%</b></div><div class="kpi"><span>超支预测</span><b>318万</b></div></div>
+          <div class="phone-tabs"><i></i><i></i><i></i><i></i></div>
+          <div class="phone-card"><div class="funnel"><i class="stage s1"></i><i class="stage s2"></i><i class="stage s3"></i></div></div>
+          <div class="phone-card"><div class="insight"><b>需拍板 3 项</b><span>适合白底办公系统嵌入。</span></div></div>
+        </div></div>
+      </div>
+      <div class="body"><h3><span class="tag">B</span>金融研报白</h3><p>干净、耐看、像正式经营分析报告。适合普通办公系统，但“董事长驾驶舱”的压场感弱于 A。</p></div>
+    </div>
+
+    <div class="option-card c" data-choice="style-c" onclick="toggleSelect(this)">
+      <div class="preview">
+        <div class="desktop">
+          <div class="top"><div class="title"><strong>IT 项目管理董事长驾驶舱</strong><span>本月 · 全部部门 · 2026-05-27</span></div><div class="chips"><i class="chip"></i><i class="chip"></i><i class="chip"></i></div></div>
+          <div class="kpis"><div class="kpi"><span>需求</span><b>326</b></div><div class="kpi"><span>接收</span><b>248</b></div><div class="kpi"><span>完成</span><b>173</b></div><div class="kpi"><span>人月</span><b>186</b></div><div class="kpi"><span>投入</span><b>2760万</b></div><div class="kpi"><span>风险</span><b>9</b></div></div>
+          <div class="grid">
+            <div class="panel"><h5>需求承接</h5><div class="funnel"><i class="stage s1"></i><i class="stage s2"></i><i class="stage s3"></i></div></div>
+            <div class="panel"><h5>人力负荷</h5><div class="heat"><i></i><i class="cell"></i><i class="cell m"></i><i class="cell h"></i><i class="cell h"></i><i class="cell m"></i><i></i><i class="cell"></i><i class="cell"></i><i class="cell m"></i><i class="cell"></i><i class="cell"></i></div></div>
+            <div class="panel"><h5>项目资金</h5><div class="barline"><i style="width:86%"></i></div><div class="barline"><i style="width:58%;background:#3d8f7a"></i></div><div class="barline"><i style="width:72%;background:#d65f55"></i></div></div>
+            <div class="panel"><h5>交付路线图</h5><div class="gantt-row"><i class="label"></i><div class="line"><i class="task" style="left:8%;width:58%"></i></div><i class="label"></i></div><div class="gantt-row"><i class="label"></i><div class="line"><i class="task green" style="left:16%;width:52%"></i></div><i class="label"></i></div></div>
+            <div class="panel" style="grid-column:1/3;"><h5>风险解读</h5><div class="insight"><b>门店智能补货进入高投入低进度象限</b><span>建议暂停新增范围，先完成核心链路验收。</span></div><div class="insight"><b>营销中心需求缺口挤压 CRM 交付</b><span>建议调减低价值需求或补充临时外包。</span></div></div>
+          </div>
+        </div>
+        <div class="phone"><div class="phone-screen">
+          <div class="top"><div class="title"><strong>董事长驾驶舱</strong><span>本月 · 全部部门</span></div></div>
+          <div class="phone-kpis"><div class="kpi"><span>完成</span><b>173</b></div><div class="kpi"><span>高风险</span><b>9</b></div><div class="kpi"><span>人力峰值</span><b>112%</b></div><div class="kpi"><span>超支预测</span><b>318万</b></div></div>
+          <div class="phone-tabs"><i></i><i></i><i></i><i></i></div>
+          <div class="phone-card"><div class="insight"><b>需拍板 3 项</b><span>质感强，但有商务会所风险。</span></div></div>
+        </div></div>
+      </div>
+      <div class="body"><h3><span class="tag">C</span>黑金董事会</h3><p>压场、贵气，但容易显得装饰过度。除非你明确要“黑金大屏”，否则我不建议默认用它。</p></div>
+    </div>
+  </div>
+</div>

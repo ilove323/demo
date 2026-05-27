@@ -1,0 +1,124 @@
+<style>
+  .options2 { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:18px; }
+  .card2 { border:1px solid #d8dee8; border-radius:10px; background:#fff; overflow:hidden; cursor:pointer; transition:.16s ease; }
+  .card2:hover { border-color:#3157d5; box-shadow:0 10px 28px rgba(20,38,80,.12); transform:translateY(-1px); }
+  .preview { height:360px; background:#f6f8fb; border-bottom:1px solid #e6ebf2; padding:12px; }
+  .module { height:100%; display:grid; grid-template-rows:24px 1fr 1fr; gap:9px; }
+  .toolbar { display:flex; align-items:center; justify-content:space-between; font-size:10px; color:#475569; }
+  .filter { display:flex; gap:4px; }
+  .filter i { width:34px; height:11px; border-radius:10px; background:#dfe6f2; }
+  .filter i:first-child { background:#3157d5; }
+  .panel { background:#fff; border:1px solid #e3e9f2; border-radius:8px; padding:9px; overflow:hidden; }
+  .ptitle { display:flex; justify-content:space-between; align-items:center; margin-bottom:7px; font-size:10px; font-weight:700; color:#1f2937; }
+  .muted { color:#7b8798; font-size:8px; font-weight:500; }
+  .kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-bottom:7px; }
+  .kpi { background:#f8fafc; border:1px solid #edf2f7; border-radius:5px; padding:5px; }
+  .kpi b { display:block; font-size:12px; color:#0f172a; line-height:1; }
+  .kpi span { font-size:7px; color:#64748b; }
+  .row { display:grid; grid-template-columns:52px 1fr 28px; gap:6px; align-items:center; margin:5px 0; }
+  .dept { font-size:8px; color:#334155; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .track { height:10px; border-radius:10px; background:#edf2f7; position:relative; overflow:hidden; }
+  .fill { position:absolute; left:0; top:0; bottom:0; border-radius:10px; background:#3157d5; }
+  .fill.warn { background:#f0a43a; } .fill.bad { background:#ef4444; } .fill.green { background:#12a594; }
+  .num { font-size:8px; color:#475569; text-align:right; }
+  .bars { display:grid; grid-template-columns:repeat(8,1fr); align-items:end; gap:6px; height:88px; border-bottom:1px solid #d8dee8; padding:0 4px; }
+  .bar { border-radius:4px 4px 0 0; background:#3157d5; position:relative; }
+  .bar:after { content:""; position:absolute; left:0; right:0; bottom:0; height:32%; background:#12a594; border-radius:0; }
+  .line { height:78px; position:relative; margin-top:8px; border-left:1px solid #d8dee8; border-bottom:1px solid #d8dee8; }
+  .sparkline { position:absolute; inset:8px 6px 8px 10px; background:linear-gradient(160deg, transparent 0 24%, #3157d5 24% 26%, transparent 26% 45%, #3157d5 45% 47%, transparent 47% 68%, #ef4444 68% 70%, transparent 70%); }
+  .heat { display:grid; grid-template-columns:58px repeat(5,1fr); gap:3px; align-items:center; }
+  .cell { height:13px; border-radius:3px; background:#e8eef6; }
+  .cell.m { background:#f6c76a; } .cell.h { background:#ee6b5a; } .cell.g { background:#78c7b7; }
+  .money-grid { display:grid; grid-template-columns:56px 1fr 1fr 1fr; gap:5px; align-items:center; }
+  .mini { height:8px; border-radius:8px; background:#e8eef6; position:relative; }
+  .mini i { position:absolute; left:0; top:0; bottom:0; border-radius:8px; background:#12a594; }
+  .mini:nth-child(4n) i { background:#ef4444; }
+  .donuts { display:flex; gap:10px; justify-content:space-around; align-items:center; height:86px; }
+  .donut { width:58px; height:58px; border-radius:50%; background:conic-gradient(#3157d5 0 42%, #12a594 42% 70%, #f0a43a 70% 88%, #94a3b8 88%); position:relative; }
+  .donut:after { content:""; position:absolute; inset:14px; border-radius:50%; background:white; border:1px solid #e5e7eb; }
+  .body { padding:14px 16px 16px; }
+  .tag { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:#1f4fd8; color:#fff; font-weight:700; font-size:12px; margin-right:8px; }
+  h3 { margin:0 0 6px; font-size:16px; }
+  p { margin:0; color:#607089; font-size:13px; line-height:1.45; }
+</style>
+
+<h2>资源投入模块重做：人和钱拆成两个图</h2>
+<p class="subtitle">你说得对，人力和资金不能揉成一张图。下面三套都是双图组合：上半块做人力投入，下半块做资金投入，部门筛选同时作用于两个图。</p>
+
+<div class="options2">
+  <div class="card2" data-choice="two-a" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="module">
+        <div class="toolbar"><strong>资源投入</strong><span class="filter"><i></i><i></i><i></i></span></div>
+        <div class="panel">
+          <div class="ptitle">人力投入：部门负荷排行 <span class="muted">FTE / 利用率</span></div>
+          <div class="kpis"><div class="kpi"><b>186</b><span>投入人月</span></div><div class="kpi"><b>112%</b><span>峰值负荷</span></div><div class="kpi"><b>21</b><span>外包人力</span></div></div>
+          <div class="row"><span class="dept">营销中心</span><div class="track"><i class="fill bad" style="width:112%"></i></div><span class="num">112%</span></div>
+          <div class="row"><span class="dept">供应链</span><div class="track"><i class="fill" style="width:94%"></i></div><span class="num">94%</span></div>
+          <div class="row"><span class="dept">采购管理</span><div class="track"><i class="fill warn" style="width:106%"></i></div><span class="num">106%</span></div>
+          <div class="row"><span class="dept">财务共享</span><div class="track"><i class="fill green" style="width:78%"></i></div><span class="num">78%</span></div>
+        </div>
+        <div class="panel">
+          <div class="ptitle">资金投入：预算执行偏差 <span class="muted">预算 / 已用 / 预测</span></div>
+          <div class="money-grid">
+            <span class="dept"></span><span class="muted">预算</span><span class="muted">已用</span><span class="muted">预测</span>
+            <span class="dept">营销中心</span><div class="mini"><i style="width:100%"></i></div><div class="mini"><i style="width:74%"></i></div><div class="mini"><i style="width:106%"></i></div>
+            <span class="dept">供应链</span><div class="mini"><i style="width:100%"></i></div><div class="mini"><i style="width:62%"></i></div><div class="mini"><i style="width:91%"></i></div>
+            <span class="dept">门店运营</span><div class="mini"><i style="width:100%"></i></div><div class="mini"><i style="width:83%"></i></div><div class="mini"><i style="width:118%"></i></div>
+            <span class="dept">财务共享</span><div class="mini"><i style="width:100%"></i></div><div class="mini"><i style="width:48%"></i></div><div class="mini"><i style="width:79%"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="body"><h3><span class="tag">A</span>排行 + 偏差矩阵</h3><p>推荐。人力看部门负荷排行，资金看预算/已用/预测三列偏差。董事长能快速判断“人卡在哪、钱超在哪”。</p></div>
+  </div>
+
+  <div class="card2" data-choice="two-b" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="module">
+        <div class="toolbar"><strong>资源投入</strong><span class="filter"><i></i><i></i><i></i></span></div>
+        <div class="panel">
+          <div class="ptitle">人力投入：角色结构 <span class="muted">产品 / 开发 / 测试 / 运维</span></div>
+          <div class="bars">
+            <i class="bar" style="height:64%"></i><i class="bar" style="height:78%"></i><i class="bar" style="height:52%"></i><i class="bar" style="height:88%"></i>
+            <i class="bar" style="height:70%"></i><i class="bar" style="height:94%"></i><i class="bar" style="height:57%"></i><i class="bar" style="height:76%"></i>
+          </div>
+          <div class="row"><span class="dept">开发</span><div class="track"><i class="fill bad" style="width:118%"></i></div><span class="num">过载</span></div>
+        </div>
+        <div class="panel">
+          <div class="ptitle">资金投入：月度消耗趋势 <span class="muted">实际 vs 计划</span></div>
+          <div class="kpis"><div class="kpi"><b>¥428万</b><span>年度预算</span></div><div class="kpi"><b>¥276万</b><span>已发生</span></div><div class="kpi"><b>+8%</b><span>预测偏差</span></div></div>
+          <div class="line"><i class="sparkline"></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="body"><h3><span class="tag">B</span>角色结构 + 资金趋势</h3><p>适合解释资源结构和烧钱速度。比 A 更有经营复盘感，但部门间“谁超了”不如 A 直接。</p></div>
+  </div>
+
+  <div class="card2" data-choice="two-c" onclick="toggleSelect(this)">
+    <div class="preview">
+      <div class="module">
+        <div class="toolbar"><strong>资源投入</strong><span class="filter"><i></i><i></i><i></i></span></div>
+        <div class="panel">
+          <div class="ptitle">人力投入：部门 × 月份负荷热力 <span class="muted">本月默认</span></div>
+          <div class="heat">
+            <span class="dept"></span><span class="muted">W1</span><span class="muted">W2</span><span class="muted">W3</span><span class="muted">W4</span><span class="muted">W5</span>
+            <span class="dept">营销</span><i class="cell g"></i><i class="cell m"></i><i class="cell h"></i><i class="cell h"></i><i class="cell m"></i>
+            <span class="dept">供应链</span><i class="cell"></i><i class="cell g"></i><i class="cell m"></i><i class="cell m"></i><i class="cell"></i>
+            <span class="dept">采购</span><i class="cell m"></i><i class="cell h"></i><i class="cell h"></i><i class="cell m"></i><i class="cell"></i>
+            <span class="dept">财务</span><i class="cell"></i><i class="cell"></i><i class="cell g"></i><i class="cell m"></i><i class="cell"></i>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="ptitle">资金投入：费用类别占比 <span class="muted">软硬件 / 外包 / 云资源</span></div>
+          <div class="donuts">
+            <div><i class="donut"></i><div class="muted" style="text-align:center;margin-top:5px;">按部门</div></div>
+            <div><i class="donut" style="background:conic-gradient(#ef4444 0 30%, #f0a43a 30% 58%, #12a594 58% 82%, #94a3b8 82%)"></i><div class="muted" style="text-align:center;margin-top:5px;">按费用</div></div>
+          </div>
+          <div class="row"><span class="dept">外包费用</span><div class="track"><i class="fill warn" style="width:68%"></i></div><span class="num">¥92万</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="body"><h3><span class="tag">C</span>负荷热力 + 费用占比</h3><p>视觉上很专业，适合发现周期性拥堵和钱的结构；但资金占比对“是否超预算”的判断弱一些。</p></div>
+  </div>
+</div>
