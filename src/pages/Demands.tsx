@@ -8,11 +8,13 @@ const priorities: Priority[] = ["P0", "P1", "P2", "P3"];
 export function Demands({
   demands,
   canAdjustPriority = true,
+  canCreateDemand = false,
   onPriorityChange,
   onOpenDetail
 }: {
   demands: Demand[];
   canAdjustPriority?: boolean;
+  canCreateDemand?: boolean;
   onPriorityChange: (id: string, priority: Priority) => void;
   onOpenDetail: (id: string) => void;
 }) {
@@ -39,9 +41,11 @@ export function Demands({
         <div>
           <h1>需求管理</h1>
         </div>
-        <button className="btn" onClick={() => setCreating(true)}>
-          <Plus size={16} /> 新建需求
-        </button>
+        {canCreateDemand ? (
+          <button className="btn" onClick={() => setCreating(true)}>
+            <Plus size={16} /> 新建需求
+          </button>
+        ) : null}
       </div>
 
       <div className="panel">

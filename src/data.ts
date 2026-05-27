@@ -268,6 +268,33 @@ export const resourceTrend: ReportDatum[] = [
 
 export const demands: Demand[] = [
   {
+    id: "REQ-STAGE-0",
+    name: "销售样品申请移动化",
+    requester: "沈岚",
+    team: "业务部门",
+    priority: "P2",
+    status: "草稿",
+    handler: "待产品经理评审",
+    progress: 6,
+    targetDate: "2026-07-18",
+    implementation: "内部实现",
+    objective: "让需求方用手机提交样品申请、审批附件和期望到货时间，减少纸质流转。",
+    description: "当前销售样品申请依赖线下表格和邮件，需求方正在补充审批节点、样品类型、附件模板和验收口径。",
+    milestones: ["草稿已保存", "待需求方发起需求评审"],
+    comments: ["用于验证需求方在阶段0点击“发起需求评审”", "需求方负责人可调整重要级别"],
+    linkedProject: "待项目申请",
+    score: undefined,
+    analysis: {
+      feasibility: "现有 H5 表单和附件能力可复用，关键是补齐审批节点和数据留痕要求。",
+      valueScore: 76,
+      implementationReason: "草稿阶段尚未进入产品评审，当前实现方式只是需求方预估。",
+      resourcePlan: "待产品经理评审后估算。",
+      iteration: "样品协同 V0.1"
+    },
+    priorityHistory: ["提交时 P2"],
+    lifecycleSteps: demandLifecycle("草稿")
+  },
+  {
     id: "REQ-2026-041",
     name: "SAP S/4HANA 财务供应链升级",
     requester: "沈岚",
@@ -292,7 +319,7 @@ export const demands: Demand[] = [
       iteration: "SAP 核心平台 V2026.1"
     },
     priorityHistory: ["提交时 P1", "业务部门负责人调整为 P0：财务月结和供应链结算强依赖"],
-    lifecycleSteps: demandLifecycle("交付实施")
+    lifecycleSteps: demandLifecycle("项目进行")
   },
   {
     id: "REQ-2026-038",
@@ -301,7 +328,7 @@ export const demands: Demand[] = [
     team: "业务部门",
     priority: "P1",
     status: "需求评审",
-    handler: "赵敏 / 产品",
+    handler: "陈彦 / 产品",
     progress: 26,
     targetDate: "2026-07-05",
     implementation: "合作实现",
@@ -319,7 +346,34 @@ export const demands: Demand[] = [
       iteration: "CRM 合规 V3.2"
     },
     priorityHistory: ["提交时 P2", "业务部门负责人调整为 P1：合规审计前必须上线"],
-    lifecycleSteps: demandLifecycle("产品评估")
+    lifecycleSteps: demandLifecycle("需求评审")
+  },
+  {
+    id: "REQ-STAGE-2",
+    name: "质量偏差 CAPA 跟踪看板",
+    requester: "沈岚",
+    team: "业务部门",
+    priority: "P1",
+    status: "方案确认",
+    handler: "陈彦 / 产品",
+    progress: 38,
+    targetDate: "2026-07-12",
+    implementation: "内部实现",
+    objective: "统一查看偏差、CAPA、责任人、到期提醒和关闭状态，减少质量复盘遗漏。",
+    description: "产品经理已完成解决方案和资源估算，等待需求方确认是否发起项目申请。",
+    milestones: ["AI 评分已生成", "产品方案已提交", "等待需求方确认方案"],
+    comments: ["用于验证需求方在阶段2点击“发起项目申请 / 放弃需求”", "确认时必须填写留言"],
+    linkedProject: "待项目申请",
+    score: undefined,
+    analysis: {
+      feasibility: "偏差和 CAPA 数据已经在质量系统沉淀，可先做只读看板和到期提醒。",
+      valueScore: 87,
+      implementationReason: "产品经理建议内部实现，复用现有质量数据接口和权限模型。",
+      resourcePlan: "产品经理 1 人、全栈开发 1 人、测试 1 人，预计 28 人天。",
+      iteration: "质量协同 V1.0"
+    },
+    priorityHistory: ["提交时 P2", "业务部门负责人调整为 P1：季度质量复盘依赖"],
+    lifecycleSteps: demandLifecycle("方案确认")
   },
   {
     id: "REQ-2026-033",
@@ -328,7 +382,7 @@ export const demands: Demand[] = [
     team: "业务部门",
     priority: "P1",
     status: "项目验收",
-    handler: "王骁 / 产品",
+    handler: "陈彦 / 产品",
     progress: 92,
     targetDate: "2026-05-29",
     implementation: "合作实现",
@@ -346,7 +400,7 @@ export const demands: Demand[] = [
       iteration: "质量数字化 V1.5"
     },
     priorityHistory: ["提交时 P1", "保持 P1：年度 GMP 审计前验收"],
-    lifecycleSteps: demandLifecycle("业务验收")
+    lifecycleSteps: demandLifecycle("项目验收")
   },
   {
     id: "REQ-2026-030",
@@ -373,12 +427,12 @@ export const demands: Demand[] = [
       iteration: "业务数据门户 V1.0"
     },
     priorityHistory: ["提交时 P2", "业务部门负责人调整为 P1：月度经营复盘依赖"],
-    lifecycleSteps: demandLifecycle("交付实施")
+    lifecycleSteps: demandLifecycle("项目进行")
   },
   {
     id: "REQ-2026-026",
     name: "LIMS 实验室信息管理系统升级",
-    requester: "高翔",
+    requester: "沈岚",
     team: "业务部门",
     priority: "P2",
     status: "验收完成",
@@ -388,14 +442,14 @@ export const demands: Demand[] = [
     implementation: "合作实现",
     objective: "提升实验样本、检测结果、仪器接口和审计追踪管理效率。",
     description: "升级 LIMS 样本流转、仪器数据采集、结果复核、电子签名和报表能力。",
-    milestones: ["供应商交付", "验证完成", "业务部门验收完成"],
-    comments: ["仪器接口稳定性达到预期", "业务部门评分较高"],
+    milestones: ["供应商交付", "验证完成", "需求方验收完成"],
+    comments: ["仪器接口稳定性达到预期", "需求方评分较高"],
     linkedProject: "LIMS 实验室系统升级",
     score: 4.8,
     analysis: {
       feasibility: "供应商已有成熟 LIMS 升级方案，重点在仪器接口和历史数据迁移。",
       valueScore: 86,
-      implementationReason: "LIMS 供应商负责产品升级，IT部负责供应商交付治理，IT部负责接口、安全和验证支持，业务部门负责业务验收。",
+      implementationReason: "LIMS 供应商负责产品升级，IT部负责供应商交付治理，IT部负责接口、安全和验证支持，需求方负责验收评分。",
       resourcePlan: "产品经理 1 人、供应商实施 3 人、内部验证测试 1 人。",
       iteration: "实验室信息化 V2.0"
     },
@@ -403,11 +457,11 @@ export const demands: Demand[] = [
       score: 4.8,
       comment: "样本流转和仪器数据采集效率明显提升，审计追踪满足验证要求。",
       conclusion: "通过验收",
-      reviewer: "宋岚",
+      reviewer: "沈岚",
       date: "2026-05-12"
     },
     priorityHistory: ["提交时 P2", "保持 P2：开发效率专项"],
-    lifecycleSteps: demandLifecycle("完成")
+    lifecycleSteps: demandLifecycle("验收完成")
   },
   {
     id: "REQ-2026-019",
@@ -416,7 +470,7 @@ export const demands: Demand[] = [
     team: "业务部门",
     priority: "P2",
     status: "项目进行",
-    handler: "赵敏 / 产品",
+    handler: "陈彦 / 产品",
     progress: 76,
     targetDate: "2026-06-10",
     implementation: "合作实现",
@@ -429,12 +483,12 @@ export const demands: Demand[] = [
     analysis: {
       feasibility: "硬件到货和机房电力是主要约束，调度平台可基于现有容器平台扩展。",
       valueScore: 91,
-      implementationReason: "算力平台由 IT部项目经理统筹，IT部负责平台联调和技术验收，硬件与机房实施由外部供应商配合，业务部门参与业务验收。",
+      implementationReason: "算力平台由 IT部项目经理统筹，IT部负责平台联调和技术验收，硬件与机房实施由外部供应商配合，需求方参与验收评分。",
       resourcePlan: "基础架构 2 人、平台开发 1 人、网络工程师 1 人、供应商实施 2 人，共 98 人天。",
       iteration: "算法算力平台 V1.0"
     },
     priorityHistory: ["提交时 P2", "保持 P2：GPU 到货前不升优先级"],
-    lifecycleSteps: demandLifecycle("交付实施")
+    lifecycleSteps: demandLifecycle("项目进行")
   },
   {
     id: "REQ-2026-014",
@@ -442,7 +496,7 @@ export const demands: Demand[] = [
     requester: "周宁",
     team: "业务部门",
     priority: "P3",
-    status: "需求评审",
+    status: "项目启动",
     handler: "陈彦 / 产品",
     progress: 12,
     targetDate: "2026-07-20",
@@ -461,7 +515,7 @@ export const demands: Demand[] = [
       iteration: "培训中心硬件更新 V1.0"
     },
     priorityHistory: ["提交时 P3", "保持 P3：可与季度培训计划错峰实施"],
-    lifecycleSteps: demandLifecycle("业务确认")
+    lifecycleSteps: demandLifecycle("项目启动")
   }
 ];
 
@@ -470,8 +524,8 @@ export const projects: Project[] = [
     id: "PRJ-126",
     name: "SAP S/4HANA 财务供应链一体化",
     demandId: "REQ-2026-041",
-    owner: "马骏",
-    supplierManager: "马骏",
+    owner: "李书航",
+    supplierManager: "李书航",
     projectType: "软件项目",
     implementation: "合作实现",
     stage: "项目进行",
@@ -481,7 +535,7 @@ export const projects: Project[] = [
     personDays: 132,
     risk: "中",
     riskReason: "主数据冻结窗口和外围接口排期存在依赖",
-    riskResponse: "项目经理已设置主数据冻结日和接口联调日历，若 6 月 3 日前未完成则拆分非关键接口二期上线。",
+    riskResponse: "产品经理推动主数据冻结和接口联调计划；项目经理已完成接口开发与测试资源指派，开发按任务推进，若 6 月 3 日前未完成则拆分非关键接口二期上线。",
     aiScore: {
       businessValue: 92,
       urgency: 86,
@@ -508,8 +562,8 @@ export const projects: Project[] = [
     id: "PRJ-124",
     name: "CRM 合规拜访改造",
     demandId: "REQ-2026-038",
-    owner: "马骏",
-    supplierManager: "马骏",
+    owner: "李书航",
+    supplierManager: "李书航",
     projectType: "软件项目",
     implementation: "合作实现",
     stage: "项目启动",
@@ -519,7 +573,7 @@ export const projects: Project[] = [
     personDays: 64,
     risk: "低",
     riskReason: "供应商报价和移动端合规留痕方案仍在评审",
-    riskResponse: "产品经理组织供应商评分，项目经理同步准备商务评审和合同风险清单。",
+    riskResponse: "产品经理组织供应商评分并收敛合规方案；项目经理只在资源窗口合适后启动项目，开发与供应商按确认方案执行。",
     aiScore: {
       businessValue: 88,
       urgency: 82,
@@ -546,8 +600,8 @@ export const projects: Project[] = [
     id: "PRJ-119",
     name: "GxP 电子文档与验证平台",
     demandId: "REQ-2026-033",
-    owner: "马骏",
-    supplierManager: "马骏",
+    owner: "李书航",
+    supplierManager: "李书航",
     projectType: "软件项目",
     implementation: "合作实现",
     stage: "项目验收",
@@ -557,7 +611,7 @@ export const projects: Project[] = [
     personDays: 72,
     risk: "低",
     riskReason: "待业务部门完成验收评分",
-    riskResponse: "产品经理已发起业务部门验收邀请，项目经理准备验证包归档清单。",
+    riskResponse: "产品经理已发起业务部门验收邀请，开发和供应商补齐验证包归档材料。",
     aiScore: {
       businessValue: 90,
       urgency: 80,
@@ -569,7 +623,7 @@ export const projects: Project[] = [
     stages: projectStageTrack("项目验收"),
     milestones: [
       { name: "验证测试通过", date: "2026-05-20", status: "完成" },
-      { name: "业务验收", date: "2026-05-29", status: "进行中" }
+      { name: "需求方验收", date: "2026-05-29", status: "进行中" }
     ],
     resources: ["全栈开发 1 人", "验证工程师 1 人", "测试 1 人"],
     taskIds: ["TASK-818", "TASK-819", "TASK-817"],
@@ -594,7 +648,7 @@ export const projects: Project[] = [
     personDays: 58,
     risk: "中",
     riskReason: "指标口径和部门数据权限需要业务部门负责人最终确认",
-    riskResponse: "产品经理将口径冻结会提前到 5 月 31 日，开发先完成权限模型和审计日志底座。",
+    riskResponse: "产品经理将口径冻结会提前到 5 月 31 日，开发按已指派任务先完成权限模型和审计日志底座。",
     aiScore: {
       businessValue: 84,
       urgency: 76,
@@ -657,8 +711,8 @@ export const projects: Project[] = [
     id: "PRJ-131",
     name: "算力中心 GPU 集群一期",
     demandId: "REQ-2026-019",
-    owner: "许知远",
-    supplierManager: "马骏",
+    owner: "李书航",
+    supplierManager: "李书航",
     projectType: "硬件项目",
     implementation: "合作实现",
     stage: "项目进行",
@@ -694,8 +748,8 @@ export const projects: Project[] = [
     id: "PRJ-097",
     name: "培训中心音视频设备更新",
     demandId: "REQ-2026-014",
-    owner: "马骏",
-    supplierManager: "马骏",
+    owner: "李书航",
+    supplierManager: "李书航",
     projectType: "硬件项目",
     implementation: "外部供应商",
     stage: "项目启动",
@@ -705,7 +759,7 @@ export const projects: Project[] = [
     personDays: 8,
     risk: "低",
     riskReason: "现场踏勘尚未完成，设备清单和布线窗口待确认",
-    riskResponse: "项目经理安排供应商踏勘并锁定培训空档期，避免影响季度合规培训。",
+    riskResponse: "产品经理确认外部供应商实施方案；项目经理启动后锁定供应商踏勘和施工窗口，避免影响季度合规培训。",
     aiScore: {
       businessValue: 70,
       urgency: 66,
@@ -720,7 +774,7 @@ export const projects: Project[] = [
       { name: "设备清单确认", date: "2026-06-06", status: "未开始" },
       { name: "安装验收", date: "2026-07-20", status: "未开始" }
     ],
-    resources: ["外部集成商 3 人", "项目经理治理 1 人", "业务验收 2 人"],
+    resources: ["外部集成商 3 人", "项目经理治理 1 人", "需求方验收 2 人"],
     taskIds: ["TASK-621", "TASK-622", "TASK-623"],
     contributions: [
       { party: "远见智能会议集成商", type: "外部供应商", responsibility: "设备采购、弱电布线、音视频调试、录播联动和现场培训", effort: "42 人天", cost: "45 万合同", status: "待踏勘" },
@@ -1159,6 +1213,19 @@ export const resourceRequests: ResourceRequest[] = [
 
 export const deliveryRequests: DeliveryRequest[] = [
   {
+    id: "DR-CAPA-002",
+    demandId: "REQ-STAGE-2",
+    title: "质量偏差 CAPA 跟踪看板项目申请草案",
+    productOwner: "陈彦",
+    projectManager: "李书航",
+    requestedMode: "内部实现",
+    resourceNeed: "全栈开发 1 人、测试 1 人，预计 28 人天",
+    supplierNeed: "无外部供应商",
+    status: "方案确认中",
+    submittedAt: "2026-05-26",
+    decision: "产品经理已提交方案，等待需求方确认后正式发起项目申请。"
+  },
+  {
     id: "DR-SAP-041",
     demandId: "REQ-2026-041",
     projectId: "PRJ-126",
@@ -1177,7 +1244,7 @@ export const deliveryRequests: DeliveryRequest[] = [
     demandId: "REQ-2026-038",
     projectId: "PRJ-124",
     title: "CRM 合规拜访改造项目申请",
-    productOwner: "赵敏",
+    productOwner: "陈彦",
     projectManager: "李书航",
     requestedMode: "合作实现",
     resourceNeed: "移动端开发 1 人、接口开发 1 人、CRM 供应商技术评估 6 人天",
@@ -1327,6 +1394,23 @@ function workflowNodes(
 
 export const demandProjectFlows: DemandProjectFlow[] = [
   {
+    id: "FLOW-STAGE-0",
+    demandId: "REQ-STAGE-0",
+    projectId: "待项目申请",
+    title: "销售样品申请移动化工作流",
+    mode: "内部实现",
+    currentNodeId: "draft",
+    resourceRequest: {
+      requester: "沈岚",
+      need: "草稿阶段暂未形成资源申请",
+      days: 0,
+      window: "待需求方发起需求评审",
+      status: "草稿"
+    },
+    nodes: workflowNodes("draft", { requester: "沈岚", product: "陈彦", pm: "李书航", developers: "待指派", reviewer: "周宁" }),
+    assignments: []
+  },
+  {
     id: "FLOW-SAP-041",
     demandId: "REQ-2026-041",
     projectId: "PRJ-126",
@@ -1354,17 +1438,34 @@ export const demandProjectFlows: DemandProjectFlow[] = [
     mode: "合作实现",
     currentNodeId: "demandReview",
     resourceRequest: {
-      requester: "赵敏",
+      requester: "陈彦",
       need: "CRM 供应商技术评估、移动端开发 1 人、接口开发 1 人",
       days: 6,
       window: "2026-05-25 至 2026-07-05",
       status: "方案确认中"
     },
-    nodes: workflowNodes("demandReview", { requester: "周宁", product: "赵敏", pm: "李书航", developers: "姜曼 / 陆川", reviewer: "周宁" }),
+    nodes: workflowNodes("demandReview", { requester: "周宁", product: "陈彦", pm: "李书航", developers: "姜曼 / 陆川", reviewer: "周宁" }),
     assignments: [
       { id: "ASSIGN-CRM-01", role: "前端开发", person: "姜曼", dateRange: "2026-05-25 至 2026-06-04", hours: 28, workload: "本周 36/40h", conflict: "可承接", sourceCalendarDates: ["2026-05-25", "2026-05-26", "2026-06-04"] },
       { id: "ASSIGN-CRM-02", role: "全栈开发", person: "陆川", dateRange: "2026-05-25 至 2026-06-02", hours: 12, workload: "本周 37/40h", conflict: "接近满负荷", sourceCalendarDates: ["2026-05-25"] }
     ]
+  },
+  {
+    id: "FLOW-STAGE-2",
+    demandId: "REQ-STAGE-2",
+    projectId: "待项目申请",
+    title: "质量偏差 CAPA 跟踪看板工作流",
+    mode: "内部实现",
+    currentNodeId: "solutionConfirm",
+    resourceRequest: {
+      requester: "陈彦",
+      need: "全栈开发 1 人、测试 1 人，预计 28 人天",
+      days: 28,
+      window: "2026-06-03 至 2026-07-12",
+      status: "方案确认中"
+    },
+    nodes: workflowNodes("solutionConfirm", { requester: "沈岚", product: "陈彦", pm: "李书航", developers: "待指派", reviewer: "周宁" }),
+    assignments: []
   },
   {
     id: "FLOW-OPS-030",
@@ -1406,15 +1507,55 @@ export const demandProjectFlows: DemandProjectFlow[] = [
       { id: "ASSIGN-AV-01", role: "外部实施", person: "远见智能实施", dateRange: "2026-05-29 至 2026-07-20", hours: 42, workload: "外部供应商排期", conflict: "等待场地窗口", sourceCalendarDates: ["2026-05-29"] },
       { id: "ASSIGN-AV-02", role: "项目经理", person: "李书航", dateRange: "2026-05-29 至 2026-06-06", hours: 8, workload: "合同与风险治理", conflict: "无冲突", sourceCalendarDates: ["2026-05-29"] }
     ]
+  },
+  {
+    id: "FLOW-GXP-033",
+    demandId: "REQ-2026-033",
+    projectId: "PRJ-119",
+    title: "GxP 电子文档与验证平台工作流",
+    mode: "合作实现",
+    currentNodeId: "projectAcceptance",
+    resourceRequest: {
+      requester: "陈彦",
+      need: "全栈开发 1 人、验证工程师 1 人、测试 1 人",
+      days: 72,
+      window: "2026-05-20 至 2026-05-29",
+      status: "项目验收"
+    },
+    nodes: workflowNodes("projectAcceptance", { requester: "沈岚", product: "陈彦", pm: "李书航", developers: "陆川 / 姜曼", reviewer: "周宁" }),
+    assignments: [
+      { id: "ASSIGN-GXP-01", role: "全栈开发", person: "陆川", dateRange: "2026-05-20 至 2026-05-29", hours: 12, workload: "验收缺陷处理", conflict: "可承接", sourceCalendarDates: ["2026-05-23", "2026-05-25"] },
+      { id: "ASSIGN-GXP-02", role: "前端开发", person: "姜曼", dateRange: "2026-05-20 至 2026-05-31", hours: 8, workload: "验收报表补充", conflict: "可承接", sourceCalendarDates: ["2026-05-25"] }
+    ]
+  },
+  {
+    id: "FLOW-LIMS-026",
+    demandId: "REQ-2026-026",
+    projectId: "PRJ-108",
+    title: "LIMS 实验室系统升级工作流",
+    mode: "合作实现",
+    currentNodeId: "acceptedComplete",
+    resourceRequest: {
+      requester: "陈彦",
+      need: "供应商实施 3 人、内部验证测试 1 人",
+      days: 36,
+      window: "2026-04-28 至 2026-05-12",
+      status: "已关闭"
+    },
+    nodes: workflowNodes("acceptedComplete", { requester: "沈岚", product: "陈彦", pm: "李书航", developers: "供应商实施 / 陆川", reviewer: "周宁" }),
+    assignments: [
+      { id: "ASSIGN-LIMS-01", role: "外部实施", person: "供应商实施", dateRange: "2026-04-28 至 2026-05-12", hours: 36, workload: "已完成", conflict: "无冲突", sourceCalendarDates: ["2026-05-03", "2026-05-05"] },
+      { id: "ASSIGN-LIMS-02", role: "全栈开发", person: "陆川", dateRange: "2026-05-05 至 2026-05-08", hours: 11, workload: "已完成", conflict: "无冲突", sourceCalendarDates: ["2026-05-08"] }
+    ]
   }
 ];
 
 export const supplierBudgets: SupplierBudget[] = [
-  { supplier: "明德 SAP 实施顾问", project: "SAP S/4HANA 财务供应链一体化", manager: "马骏", contract: 1880000, used: 936000, payment: "二期款待付", deliveryStatus: "FI/MM 配置项目进行", riskStatus: "中" },
-  { supplier: "星瀚 CRM 实施商", project: "CRM 合规拜访改造", manager: "马骏", contract: 720000, used: 160000, payment: "商务评审", deliveryStatus: "方案与报价评审", riskStatus: "低" },
-  { supplier: "云算科技", project: "算力中心 GPU 集群一期", manager: "马骏", contract: 3260000, used: 2480000, payment: "硬件到货验收中", deliveryStatus: "第二批 GPU 待到货", riskStatus: "高" },
+  { supplier: "明德 SAP 实施顾问", project: "SAP S/4HANA 财务供应链一体化", manager: "李书航", contract: 1880000, used: 936000, payment: "二期款待付", deliveryStatus: "FI/MM 配置项目进行", riskStatus: "中" },
+  { supplier: "星瀚 CRM 实施商", project: "CRM 合规拜访改造", manager: "李书航", contract: 720000, used: 160000, payment: "商务评审", deliveryStatus: "方案与报价评审", riskStatus: "低" },
+  { supplier: "云算科技", project: "算力中心 GPU 集群一期", manager: "李书航", contract: 3260000, used: 2480000, payment: "硬件到货验收中", deliveryStatus: "第二批 GPU 待到货", riskStatus: "高" },
   { supplier: "信合 GxP 验证咨询", project: "GxP 电子文档与验证平台", manager: "李书航", contract: 220000, used: 126000, payment: "验证包评审中", deliveryStatus: "验证包复核", riskStatus: "低" },
-  { supplier: "远见智能会议集成商", project: "培训中心音视频设备更新", manager: "马骏", contract: 450000, used: 30000, payment: "踏勘费待确认", deliveryStatus: "现场踏勘预约中", riskStatus: "低" }
+  { supplier: "远见智能会议集成商", project: "培训中心音视频设备更新", manager: "李书航", contract: 450000, used: 30000, payment: "踏勘费待确认", deliveryStatus: "现场踏勘预约中", riskStatus: "低" }
 ];
 
 export const projectInvestmentBreakdowns: ProjectInvestmentBreakdown[] = [
@@ -1510,23 +1651,22 @@ export const users: User[] = [
   { id: "u-admin", name: "系统管理员", department: "无部门", roleId: "admin", role: "全局管理员", status: "启用", scope: "全量组织、角色、菜单、通知、集成配置", dataScope: "全局" },
   { id: "u-exec-01", name: "林总", departmentId: "management", department: "管理层", roleId: "executive", role: "高管", status: "启用", scope: "全公司 IT 项目、预算、资源和绩效汇总", dataScope: "全局" },
   { id: "u-exec-02", name: "许敏", departmentId: "management", department: "管理层", roleId: "executive", role: "管理层负责人", status: "启用", scope: "全公司项目组合、预算例外和绩效复盘", dataScope: "全局" },
-  { id: "u-it-01", name: "马骏", departmentId: "it", department: "IT部", roleId: "pm", role: "项目经理", status: "启用", scope: "IT 项目池、供应商交付、合同预算和风险", dataScope: "本部门" },
+  { id: "u-it-01", name: "马骏", departmentId: "it", department: "IT部", roleId: "developer", role: "项目助理", status: "启用", scope: "供应商资料、合同台账和会议纪要协助", dataScope: "本人" },
   { id: "u-it-02", name: "李书航", departmentId: "it", department: "IT部", roleId: "pm", role: "项目经理", organizationTitle: "IT负责人", isDepartmentOwner: true, status: "启用", scope: "IT部项目治理、资源协调、供应商绩效", dataScope: "本部门" },
-  { id: "u-it-03", name: "孙昊", departmentId: "it", department: "IT部", roleId: "pm", role: "项目经理", status: "启用", scope: "硬件、机房和算力中心项目治理", dataScope: "本部门" },
-  { id: "u-it-04", name: "何嘉", departmentId: "it", department: "IT部", roleId: "pm", role: "项目经理", status: "启用", scope: "供应商实施、合同预算和上线归档", dataScope: "本部门" },
-  { id: "u-rd-01", name: "陈彦", departmentId: "rd", department: "IT部", roleId: "product", role: "产品经理", status: "启用", scope: "本人承接需求及关联项目", dataScope: "本人" },
-  { id: "u-rd-04", name: "赵敏", departmentId: "rd", department: "IT部", roleId: "product", role: "产品经理", status: "启用", scope: "本人承接 CRM、合规和供应商评估相关需求", dataScope: "本人" },
-  { id: "u-rd-05", name: "王骁", departmentId: "rd", department: "IT部", roleId: "product", role: "产品经理", status: "启用", scope: "本人承接 GxP、验证和验收组织相关需求", dataScope: "本人" },
-  { id: "u-rd-02", name: "吴承", departmentId: "rd", department: "IT部", roleId: "developer", role: "开发", status: "启用", scope: "本人任务、日/周/月排期和工时填报", dataScope: "本人" },
-  { id: "u-rd-03", name: "许知远", departmentId: "rd", department: "IT部", roleId: "developer", role: "开发", organizationTitle: "IT负责人", isDepartmentOwner: true, status: "启用", scope: "IT部开发任务、技术联调和交付验收支持", dataScope: "本部门" },
+  { id: "u-it-03", name: "孙昊", departmentId: "it", department: "IT部", roleId: "developer", role: "基础架构", status: "启用", scope: "硬件、机房和算力中心技术实施", dataScope: "本人" },
+  { id: "u-it-04", name: "何嘉", departmentId: "it", department: "IT部", roleId: "developer", role: "供应商协调", status: "启用", scope: "供应商实施资料、合同预算和上线归档协助", dataScope: "本人" },
+  { id: "u-rd-01", name: "陈彦", departmentId: "it", department: "IT部", roleId: "product", role: "产品经理", status: "启用", scope: "本人承接需求及关联项目", dataScope: "本人" },
+  { id: "u-rd-04", name: "赵敏", departmentId: "it", department: "IT部", roleId: "product", role: "产品经理", status: "启用", scope: "本人承接 CRM、合规和供应商评估相关需求", dataScope: "本人" },
+  { id: "u-rd-05", name: "王骁", departmentId: "it", department: "IT部", roleId: "product", role: "产品经理", status: "启用", scope: "本人承接 GxP、验证和验收组织相关需求", dataScope: "本人" },
+  { id: "u-rd-02", name: "吴承", departmentId: "it", department: "IT部", roleId: "developer", role: "开发", status: "启用", scope: "本人任务、日/周/月排期和工时填报", dataScope: "本人" },
+  { id: "u-rd-03", name: "许知远", departmentId: "it", department: "IT部", roleId: "developer", role: "开发", status: "启用", scope: "IT部开发任务、技术联调和交付验收支持", dataScope: "本人" },
   { id: "u-ops-01", name: "沈岚", departmentId: "ops", department: "业务部门", roleId: "requester", role: "需求方", status: "启用", scope: "本人提交需求、进度查看和验收评分", dataScope: "本人" },
   { id: "u-ops-02", name: "周宁", departmentId: "ops", department: "业务部门", roleId: "requester", role: "需求方负责人", organizationTitle: "业务部门负责人", isDepartmentOwner: true, status: "启用", scope: "业务部门全部需求、优先级、验收评分和投入占用", dataScope: "本部门" },
   { id: "u-ops-03", name: "高翔", departmentId: "ops", department: "业务部门", roleId: "requester", role: "需求方", status: "启用", scope: "本人算力和数据分析相关需求", dataScope: "本人" }
 ];
 
 export const departments: Department[] = [
-  { id: "it", name: "IT部", ownerUserIds: ["u-it-02"], memberUserIds: ["u-it-01", "u-it-02", "u-it-03", "u-it-04"], scope: "项目治理、供应商交付、合同预算、硬件与软硬件协同项目管理", status: "启用" },
-  { id: "rd", name: "IT部", ownerUserIds: ["u-rd-03"], memberUserIds: ["u-rd-01", "u-rd-02", "u-rd-03", "u-rd-04", "u-rd-05"], scope: "产品方案、内部开发、接口联调、平台开发和技术验收支持", status: "启用" },
+  { id: "it", name: "IT部", ownerUserIds: ["u-it-02"], memberUserIds: ["u-it-01", "u-it-02", "u-it-03", "u-it-04", "u-rd-01", "u-rd-02", "u-rd-03", "u-rd-04", "u-rd-05"], scope: "产品方案、项目治理、内部开发、资源池、供应商交付、合同预算和技术验收支持", status: "启用" },
   { id: "ops", name: "业务部门", ownerUserIds: ["u-ops-02"], memberUserIds: ["u-ops-01", "u-ops-02", "u-ops-03"], scope: "业务需求提交、优先级管理、验收评分和部门投入查看", status: "启用" },
   { id: "management", name: "管理层", ownerUserIds: ["u-exec-02"], memberUserIds: ["u-exec-01", "u-exec-02"], scope: "全公司 IT 项目组合、资源预算和绩效汇总", status: "启用" }
 ];
@@ -1544,14 +1684,14 @@ export const initialNotifications: NotificationItem[] = [
   {
     id: "N-520",
     title: "你被分配为 SAP 财务供应链升级项目负责人",
-    content: "李书航将 SAP S/4HANA 财务供应链一体化分配给马骏负责项目治理、资源协调和供应商交付。",
+    content: "系统将 SAP S/4HANA 财务供应链一体化分配给唯一项目经理李书航负责项目治理、资源协调和供应商交付。",
     channel: "企业微信",
     type: "工作分配",
     time: "5分钟前",
     unread: true,
     level: "blue",
     targetRoles: ["pm"],
-    targetUserNames: ["马骏"],
+    targetUserNames: ["李书航"],
     sourceUserName: "李书航",
     relatedType: "project",
     relatedId: "PRJ-126"
@@ -1559,15 +1699,15 @@ export const initialNotifications: NotificationItem[] = [
   {
     id: "N-516",
     title: "CRM 合规拜访改造需求已分配承接",
-    content: "许知远将 CRM 合规拜访改造分配给赵敏进行产品评估、实现方式判断和供应商方案评审。",
+    content: "李书航将 CRM 合规拜访改造分配给陈彦进行需求评审、实现方式判断和供应商方案评审。",
     channel: "站内信",
     type: "工作分配",
     time: "18分钟前",
     unread: true,
     level: "violet",
     targetRoles: ["product"],
-    targetUserNames: ["赵敏"],
-    sourceUserName: "许知远",
+    targetUserNames: ["陈彦"],
+    sourceUserName: "李书航",
     relatedType: "demand",
     relatedId: "REQ-2026-038"
   },
@@ -1580,7 +1720,7 @@ export const initialNotifications: NotificationItem[] = [
     time: "10分钟前",
     unread: true,
     level: "blue",
-    targetRoles: ["pm", "pm", "product"]
+    targetRoles: ["pm", "product"]
   },
   {
     id: "N-497",
@@ -1591,18 +1731,18 @@ export const initialNotifications: NotificationItem[] = [
     time: "35分钟前",
     unread: true,
     level: "red",
-    targetRoles: ["executive", "pm", "pm", "businessOwner", "requester"]
+    targetRoles: ["executive", "pm", "businessOwner", "requester"]
   },
   {
     id: "N-488",
-    title: "GxP 电子文档与验证平台待业务验收",
-    content: "业务部门可进入验收评分流程。",
+    title: "GxP 电子文档与验证平台待需求方验收",
+    content: "需求方可进入验收评分流程。",
     channel: "企业微信",
     type: "验收提醒",
     time: "2小时前",
     unread: false,
     level: "green",
-    targetRoles: ["product", "businessOwner", "pm", "pm", "requester"]
+    targetRoles: ["product", "businessOwner", "pm", "requester"]
   },
   {
     id: "N-481",
@@ -1613,7 +1753,7 @@ export const initialNotifications: NotificationItem[] = [
     time: "4小时前",
     unread: false,
     level: "cyan",
-    targetRoles: ["product", "developer", "developer", "businessOwner"]
+    targetRoles: ["product", "developer", "businessOwner"]
   },
   {
     id: "N-479",
@@ -1624,7 +1764,7 @@ export const initialNotifications: NotificationItem[] = [
     time: "5小时前",
     unread: true,
     level: "orange",
-    targetRoles: ["pm", "pm", "businessOwner", "requester"]
+    targetRoles: ["pm", "businessOwner", "requester"]
   },
   {
     id: "N-472",
@@ -1635,23 +1775,23 @@ export const initialNotifications: NotificationItem[] = [
     time: "昨天",
     unread: false,
     level: "violet",
-    targetRoles: ["executive", "pm", "pm", "product", "businessOwner", "requester"]
+    targetRoles: ["executive", "pm", "product", "businessOwner", "requester"]
   }
 ];
 
 export const notificationCatalog: NotificationCatalogItem[] = [
-  { id: "demand.new", domain: "需求", event: "新需求提交", description: "业务提交新的 IT 需求，等待业务负责人确认业务范围和优先级。", priority: "中", channels: ["站内信"], configurable: true },
+  { id: "demand.new", domain: "需求", event: "新需求提交", description: "需求方提交新的 IT 需求，等待需求方负责人确认范围和优先级。", priority: "中", channels: ["站内信"], configurable: true },
   { id: "work.assigned", domain: "任务", event: "工作分配", description: "部门负责人将需求、项目或任务分配给具体处理人。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
-  { id: "demand.accepted", domain: "需求", event: "需求承接", description: "产品经理承接需求并进入分析评估。", priority: "中", channels: ["站内信"], configurable: true },
-  { id: "demand.scopeConfirm", domain: "需求", event: "产品评估待确认", description: "产品经理提交业务范围、实现方式、资源测算和验收标准，等待业务负责人确认业务边界。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
+  { id: "demand.accepted", domain: "需求", event: "需求评审承接", description: "产品经理承接需求并进入需求评审和方案设计。", priority: "中", channels: ["站内信"], configurable: true },
+  { id: "demand.scopeConfirm", domain: "需求", event: "方案确认待处理", description: "产品经理提交范围、实现方式、资源测算和验收标准，等待需求方确认方案。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
   { id: "demand.priority", domain: "需求", event: "需求优先级调整", description: "部门负责人调整 P0/P1/P2/P3 优先级。", priority: "中", channels: ["站内信", "企业微信"], configurable: true },
-  { id: "demand.acceptance", domain: "需求", event: "需求进入验收", description: "需求进入项目验收阶段，需要业务方确认。", priority: "高", channels: ["站内信", "企业微信"], configurable: true },
+  { id: "demand.acceptance", domain: "需求", event: "需求进入验收", description: "需求进入项目验收阶段，需要需求方确认评分。", priority: "高", channels: ["站内信", "企业微信"], configurable: true },
   { id: "delivery.submitted", domain: "项目", event: "项目申请提交", description: "产品经理提交项目申请给项目经理或 IT负责人。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
-  { id: "delivery.returned", domain: "项目", event: "项目申请退回", description: "项目经理退回项目申请，要求产品经理补充产品评估、资源或供应商信息。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
-  { id: "delivery.accepted", domain: "项目", event: "项目申请受理", description: "项目经理启动项目申请并进入立项与资源排期。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
-  { id: "project.stage", domain: "项目", event: "交付阶段变更", description: "项目从项目启动、立项、资源排期、实施、联调、验收到上线归档发生阶段变化。", priority: "中", channels: ["站内信"], configurable: true },
+  { id: "delivery.returned", domain: "项目", event: "项目申请退回", description: "项目经理退回项目申请，要求产品经理补充方案、资源或供应商信息。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
+  { id: "delivery.accepted", domain: "项目", event: "项目启动", description: "项目经理判断资源可用后启动项目，进入项目进行阶段。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
+  { id: "project.stage", domain: "项目", event: "项目阶段变更", description: "项目在项目启动、项目进行、项目验收、验收完成之间发生阶段变化。", priority: "中", channels: ["站内信"], configurable: true },
   { id: "project.record", domain: "项目", event: "项目记录修改", description: "项目经理维护里程碑、预算备注、风险原因或应对措施。", priority: "中", channels: ["站内信"], configurable: true },
-  { id: "project.progress", domain: "项目", event: "交付阶段推进", description: "项目经理推进交付阶段并同步协作链路。", priority: "中", channels: ["站内信"], configurable: true },
+  { id: "project.progress", domain: "项目", event: "项目阶段推进", description: "项目经理推进项目阶段并同步协作链路。", priority: "中", channels: ["站内信"], configurable: true },
   { id: "project.riskResponse", domain: "项目", event: "风险应对更新", description: "项目经理更新风险应对，高风险事项触达 IT负责人和高管。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
   { id: "project.highRisk", domain: "项目", event: "高风险项目预警", description: "项目风险升级为高，或出现关键延期风险。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
   { id: "project.milestoneDelay", domain: "项目", event: "关键里程碑延期", description: "关键里程碑未按计划完成，影响上线或验证窗口。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
@@ -1663,8 +1803,8 @@ export const notificationCatalog: NotificationCatalogItem[] = [
   { id: "resource.approved", domain: "资源", event: "资源排期确认", description: "项目经理确认资源排期并通知产品经理和被安排人员。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
   { id: "resource.overload", domain: "资源", event: "人员超负荷", description: "人员排期超过容量或连续高负载。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
   { id: "budget.threshold", domain: "预算", event: "预算超阈值", description: "项目预算使用超过预警线或外采金额异常。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
-  { id: "acceptance.started", domain: "验收", event: "验收发起", description: "产品经理发起业务验收，业务部门需要确认结果。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
-  { id: "acceptance.score", domain: "验收", event: "验收评分提交", description: "业务完成交付评分和评价。", priority: "中", channels: ["站内信"], configurable: true },
+  { id: "acceptance.started", domain: "验收", event: "验收发起", description: "产品经理完成项目验收后，需求方需要确认结果并评分。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
+  { id: "acceptance.score", domain: "验收", event: "验收评分提交", description: "需求方完成交付评分和评价。", priority: "中", channels: ["站内信"], configurable: true },
   { id: "acceptance.lowScore", domain: "验收", event: "评分异常", description: "验收评分低于阈值，需要复盘或整改。", priority: "高", channels: ["站内信", "企业微信"], configurable: false },
   { id: "permission.changed", domain: "权限", event: "权限变更", description: "角色、用户或数据范围权限发生变化。", priority: "中", channels: ["站内信"], configurable: true },
   { id: "integration.mcpError", domain: "集成", event: "MCP 调用异常", description: "MCP 接口或企业微信机器人调用失败。", priority: "中", channels: ["站内信", "机器人"], configurable: true }
@@ -1683,42 +1823,35 @@ export const roleNotificationSubscriptions: RoleNotificationSubscription[] = [
     defaultOn: ["project.highRisk", "project.milestoneDelay", "project.riskResponse", "budget.threshold", "acceptance.lowScore"],
     optional: ["project.stage", "project.progress", "acceptance.score", "integration.mcpError"],
     locked: ["project.highRisk", "project.riskResponse", "budget.threshold"],
-    note: "高管默认接收管理例外、预算和重大交付风险，不接收普通任务流。"
+    note: "管理层默认接收管理例外、预算和重大交付风险，不接收普通任务流。"
   },
   {
     roleId: "pm",
     defaultOn: ["work.assigned", "delivery.submitted", "delivery.returned", "delivery.accepted", "project.stage", "project.progress", "project.record", "project.highRisk", "project.milestoneDelay", "resource.approval", "resource.submitted", "resource.overload", "budget.threshold", "task.due", "permission.changed"],
     optional: ["demand.new", "resource.approved", "acceptance.score", "integration.mcpError"],
     locked: ["work.assigned", "delivery.submitted", "project.highRisk", "resource.approval", "budget.threshold"],
-    note: "项目经理关注资源、风险、预算、里程碑、权限和跨项目治理。"
-  },
-  {
-    roleId: "pm",
-    defaultOn: ["work.assigned", "delivery.submitted", "delivery.accepted", "project.highRisk", "project.milestoneDelay", "project.riskResponse", "resource.approval", "resource.submitted", "resource.overload", "budget.threshold", "integration.mcpError"],
-    optional: ["project.stage", "project.progress", "project.record", "acceptance.score", "permission.changed"],
-    locked: ["project.highRisk", "project.riskResponse", "resource.overload", "budget.threshold"],
-    note: "项目经理叠加 IT负责人身份后，关注 IT部项目组合、供应商交付、资源预算和系统集成异常。"
+    note: "唯一项目经理同时是 IT负责人，关注启动判断、资源、风险、预算、里程碑和跨项目治理。"
   },
   {
     roleId: "product",
     defaultOn: ["work.assigned", "demand.new", "demand.accepted", "demand.scopeConfirm", "demand.acceptance", "delivery.returned", "delivery.accepted", "project.stage", "resource.approved", "acceptance.score"],
     optional: ["demand.priority", "project.highRisk", "delivery.submitted", "resource.submitted", "integration.mcpError"],
     locked: ["work.assigned", "demand.acceptance", "delivery.returned"],
-    note: "产品经理关注需求承接、资源申请、实现进度和验收结果。"
+    note: "产品经理关注需求评审、方案确认、资源申请、实现进度和项目验收。"
   },
   {
     roleId: "requester",
     defaultOn: ["work.assigned", "demand.acceptance", "acceptance.started", "project.stage", "acceptance.score"],
     optional: ["project.milestoneDelay", "demand.priority", "demand.accepted"],
     locked: ["demand.acceptance"],
-    note: "业务只接收本人需求的进度、里程碑和验收提醒。"
+    note: "需求方只接收本人需求的进度、方案确认、里程碑和评分提醒。"
   },
   {
     roleId: "businessOwner",
     defaultOn: ["work.assigned", "demand.priority", "demand.acceptance", "acceptance.started", "project.milestoneDelay", "resource.overload", "acceptance.lowScore"],
     optional: ["demand.new", "demand.accepted", "project.stage", "project.progress", "acceptance.score"],
     locked: ["project.milestoneDelay", "acceptance.lowScore"],
-    note: "业务角色叠加部门负责人身份后，关注本部门需求优先级、延期、验收和投入异常。"
+    note: "需求方负责人关注本部门全部需求、重要级别、延期、验收和投入异常。"
   },
   {
     roleId: "developer",
@@ -1726,150 +1859,73 @@ export const roleNotificationSubscriptions: RoleNotificationSubscription[] = [
     optional: ["project.stage", "project.progress", "integration.mcpError"],
     locked: ["work.assigned", "task.assigned", "task.due"],
     note: "开发只接收个人执行相关通知，例如任务、排期和工时。"
-  },
-  {
-    roleId: "developer",
-    defaultOn: ["work.assigned", "task.assigned", "task.due", "task.worklog", "resource.approved", "resource.overload", "project.milestoneDelay"],
-    optional: ["project.stage", "project.progress", "project.highRisk", "demand.new", "integration.mcpError"],
-    locked: ["resource.overload", "task.due"],
-    note: "开发叠加IT负责人身份后，关注IT部任务、人员负载、技术联调和延期风险。"
   }
 ];
 
 export const productWorkflowItems: ProductWorkflowItem[] = [
   {
     id: "WF-01",
-    title: "产品评估 CRM 合规拜访改造",
+    title: "阶段1需求评审：CRM 合规拜访改造",
     demandId: "REQ-2026-038",
-    owner: "赵敏",
-    stage: "产品评估",
+    owner: "陈彦",
+    stage: "需求评审",
     status: "进行中",
     description: "补齐业务目标、合规约束、审计留痕和移动端使用场景。",
     decision: "已确认拜访计划、签到定位、资料推送和医学审批为首期范围。",
-    nextAction: "组织 CRM 供应商方案评审",
-    artifacts: ["需求分析说明", "业务价值评分 88", "合规留痕清单"]
+    nextAction: "产品经理发起方案确认或打回需求",
+    artifacts: ["需求分析说明", "AI 价值评分 88", "合规留痕清单"]
   },
   {
     id: "WF-02",
-    title: "产品评估 SAP 财务供应链升级",
-    demandId: "REQ-2026-041",
+    title: "阶段2方案确认：质量偏差 CAPA 跟踪看板",
+    demandId: "REQ-STAGE-2",
     owner: "陈彦",
-    stage: "产品评估",
-    status: "已完成",
-    description: "结合长期维护、GxP 合规、数据安全、上线周期和预算选择实现方式。",
-    decision: "SAP 核心模块升级采用外部 SAP 顾问实施，内部 IT 承接接口和数据治理。",
-    nextAction: "推动主数据迁移和外围接口联调",
-    artifacts: ["实现方式评估", "资源测算 132 人天", "主数据风险说明"]
+    stage: "方案确认",
+    status: "待需求方确认",
+    description: "产品经理已完成方案、范围和资源投入测算，等待需求方确认。",
+    decision: "建议采用内部实现，先做只读看板、到期提醒和关闭状态追踪。",
+    nextAction: "需求方发起项目申请或放弃需求",
+    artifacts: ["方案说明", "资源测算 28 人天", "验收边界"]
   },
   {
     id: "WF-03",
-    title: "项目申请准备",
+    title: "阶段4项目进行：SAP 财务供应链升级",
     demandId: "REQ-2026-041",
     owner: "陈彦",
-    stage: "项目申请",
-    status: "待审批",
-    description: "把产品评估结论、ABAP、接口开发、测试和验证资源需求整理为项目申请。",
-    decision: "申请 ABAP 开发 2 人支持采购入库和批次成本接口。",
-    nextAction: "等待项目经理启动项目申请并评估资源池负载",
-    artifacts: ["资源申请单 RS-204", "排期草案", "技能栈要求"]
+    stage: "项目进行",
+    status: "开发中",
+    description: "项目经理已启动项目，开发正在拆分任务、汇报进度和登记工时。",
+    decision: "优先推进主数据迁移和外围接口联调。",
+    nextAction: "开发完成任务后由项目经理提交项目验收",
+    artifacts: ["资源申请单 RS-204", "排期草案", "任务拆分清单"]
   },
   {
     id: "WF-04",
-    title: "产品评估 CRM 供应商适配",
-    demandId: "REQ-2026-038",
-    owner: "赵敏",
-    stage: "产品评估",
-    status: "评估中",
-    description: "比较 CRM 供应商产品能力、移动端适配、合规留痕、报价和交付周期。",
-    decision: "星瀚 CRM 实施商综合评分最高，但预算需业务部门负责人确认。",
-    nextAction: "提交商务评审材料",
-    artifacts: ["供应商评分表", "技术适配清单", "报价对比"]
-  },
-  {
-    id: "WF-05",
-    title: "组织验收与评价",
+    title: "阶段5项目验收：GxP 电子文档与验证平台",
     demandId: "REQ-2026-033",
-    owner: "王骁",
-    stage: "验收组织",
-    status: "待业务评分",
-    description: "邀请业务部门完成验收评分并沉淀验证与交付评价。",
-    decision: "验证环境已准备，业务部门本周内完成评分。",
-    nextAction: "跟进验收评分并归档验证包",
+    owner: "陈彦",
+    stage: "项目验收",
+    status: "待产品验收",
+    description: "项目经理已提交项目验收，产品经理需要判断验收完成或退回项目进行。",
+    decision: "验证环境已准备，缺陷清单只剩低优先级问题。",
+    nextAction: "产品经理完成验收或退回整改",
     artifacts: ["验收邀请", "验证测试通过报告", "上线检查表"]
-  },
-  {
-    id: "WF-06",
-    title: "确认纯内部实现边界",
-    demandId: "REQ-2026-030",
-    owner: "陈彦",
-    stage: "产品评估",
-    status: "项目进行",
-    description: "评估业务指标门户是否需要外部 BI 工具或供应商开发，最终确认复用内部数据平台实现。",
-    decision: "不采购外部工具，IT部负责权限模型、报表页面和审计日志。",
-    nextAction: "冻结指标口径并完成权限联调",
-    artifacts: ["内部实现评估", "资源申请单 RS-181", "指标口径清单"]
-  },
-  {
-    id: "WF-07",
-    title: "产品评估纯外部供应商实施",
-    demandId: "REQ-2026-014",
-    owner: "陈彦",
-    stage: "产品评估",
-    status: "待踏勘",
-    description: "确认培训中心音视频设备更新不需要内部开发，重点评估集成商方案、设备清单和交付窗口。",
-    decision: "采用外部供应商完整实施，IT部项目经理负责合同、交付和风险治理。",
-    nextAction: "完成现场踏勘并提交设备清单",
-    artifacts: ["供应商踏勘计划", "预算预估 45 万", "验收标准草案"]
   }
 ];
 
 export const projectRules: ProjectRule[] = [
-  { stage: "项目启动", deliverable: "项目申请、产品评估、资源测算、验收标准", owner: "项目经理", acceptance: "项目经理确认启动或退回方案确认" },
-  { stage: "项目启动", deliverable: "项目编号、负责人、里程碑、预算草案", owner: "项目经理 / IT负责人", acceptance: "项目经理完成立项，重大项目 IT负责人确认" },
-  { stage: "项目启动", deliverable: "人员排期、供应商计划、冲突处理记录", owner: "项目经理", acceptance: "资源和时间窗口可执行" },
+  { stage: "项目启动", deliverable: "项目申请、方案确认、资源测算、验收标准", owner: "项目经理", acceptance: "项目经理确认启动或退回方案确认" },
   { stage: "项目进行", deliverable: "任务拆解、工时记录、接口清单、供应商交付记录", owner: "项目经理 / 开发", acceptance: "关键任务按周更新状态" },
-  { stage: "项目进行", deliverable: "联调结果、缺陷清单、修复记录、验证材料", owner: "开发 / 项目经理", acceptance: "高优先级缺陷清零，交付可验收" },
-  { stage: "项目验收", deliverable: "验收邀请、评分、上线检查表、验证包", owner: "产品经理组织，项目经理支持", acceptance: "业务评分并确认结论" },
-  { stage: "验收完成", deliverable: "上线确认、回滚预案、运行观察记录", owner: "项目经理", acceptance: "上线完成且运行窗口无阻塞问题" },
-  { stage: "验收完成", deliverable: "上线复盘、供应商评分、预算归档", owner: "项目经理", acceptance: "复盘完成并归档绩效数据" }
+  { stage: "项目验收", deliverable: "验收邀请、评分、上线检查表、验证包", owner: "产品经理", acceptance: "产品经理确认验收完成或退回项目进行" },
+  { stage: "验收完成", deliverable: "需求方 1-5 分评分、评价、复盘记录", owner: "需求方", acceptance: "需求方提交评分后流程关闭" }
 ];
 
 export const projectDependencies: ProjectDependency[] = [
-  {
-    project: "SAP S/4HANA 财务供应链一体化",
-    relation: "依赖",
-    target: "主数据治理专项",
-    impact: "影响物料、供应商和成本中心迁移准确性",
-    status: "跟进中"
-  },
-  {
-    project: "算力中心 GPU 集群一期",
-    relation: "阻塞",
-    target: "GPU 设备到货与机房电力扩容",
-    impact: "影响集群压测和正式验收",
-    status: "高风险"
-  },
-  {
-    project: "LIMS 实验室系统升级",
-    relation: "父子项目",
-    target: "ELN 电子实验记录二期",
-    impact: "LIMS 样本和结果数据将作为 ELN 二期集成基础",
-    status: "验收完成"
-  },
-  {
-    project: "业务指标自助报表门户",
-    relation: "依赖",
-    target: "内部数据服务与权限中心",
-    impact: "影响指标权限过滤、审计日志和报表导出准确性",
-    status: "跟进中"
-  },
-  {
-    project: "培训中心音视频设备更新",
-    relation: "依赖",
-    target: "培训中心场地空档期",
-    impact: "影响供应商进场、布线施工和录播联动验收",
-    status: "待确认"
-  }
+  { project: "SAP S/4HANA 财务供应链一体化", relation: "依赖", target: "主数据治理专项", impact: "影响物料、供应商和成本中心迁移准确性", status: "跟进中" },
+  { project: "算力中心 GPU 集群一期", relation: "阻塞", target: "GPU 设备到货与机房电力扩容", impact: "影响集群压测和正式验收", status: "高风险" },
+  { project: "LIMS 实验室系统升级", relation: "父子项目", target: "ELN 电子实验记录二期", impact: "LIMS 样本和结果数据将作为 ELN 二期集成基础", status: "验收完成" },
+  { project: "业务指标自助报表门户", relation: "依赖", target: "内部数据服务与权限中心", impact: "影响指标权限过滤、审计日志和报表导出准确性", status: "跟进中" },
+  { project: "培训中心音视频设备更新", relation: "依赖", target: "培训中心场地空档期", impact: "影响供应商进场、布线施工和录播联动验收", status: "待确认" }
 ];
 
 export const integrationEndpoints: IntegrationEndpoint[] = [
@@ -1881,7 +1937,7 @@ export const integrationEndpoints: IntegrationEndpoint[] = [
 
 export const botMessages: BotMessage[] = [
   { speaker: "user", text: "查询 SAP S/4HANA 财务供应链一体化进度" },
-  { speaker: "bot", text: "当前进度 58%，处于开发中。风险：主数据冻结窗口和外围接口排期依赖，项目经理已设置联调日历。" },
+  { speaker: "bot", text: "当前进度 58%，处于开发中。风险：主数据冻结窗口和外围接口排期依赖，产品经理推动计划确认，项目经理负责开发与测试资源指派。" },
   { speaker: "user", text: "把 TASK-901 更新为测试中" },
   { speaker: "bot", text: "已识别任务：SAP 主数据迁移校验。状态更新申请已记录，等待接口联调确认。" },
   { speaker: "user", text: "提交一个 GxP 培训记录查询优化需求" },
@@ -1891,56 +1947,44 @@ export const botMessages: BotMessage[] = [
 export const roleAccessPreviews: RoleAccessPreview[] = [
   {
     roleId: "admin",
-    visibleModules: ["项目驾驶舱", "需求管理", "产品工作台", "项目管理", "任务与工时", "资源与预算", "绩效与报表", "系统设置"],
+    visibleModules: ["工作台", "需求管理", "流程工作台", "项目管理", "任务与工时", "资源与预算", "绩效与报表", "系统设置"],
     actions: ["查看全量数据", "维护权限", "维护用户", "维护角色", "维护部门", "配置集成"],
     dataScope: "全量组织、角色、菜单、集成配置，以及全部 IT 项目数据"
   },
   {
     roleId: "executive",
-    visibleModules: ["项目驾驶舱", "项目管理", "资源与预算", "绩效与报表"],
+    visibleModules: ["工作台", "项目管理", "资源与预算", "绩效与报表"],
     actions: ["查看全局项目", "查看预算投入", "查看交付评分", "导出统计报告"],
-    dataScope: "全公司 IT 项目、预算、资源和绩效汇总；不进入用户、角色、部门等系统配置"
+    dataScope: "全公司 IT 项目、预算、资源和绩效汇总；不推进流程"
   },
   {
     roleId: "pm",
-    visibleModules: ["项目驾驶舱", "项目管理", "任务与工时", "资源与预算", "绩效与报表"],
-    actions: ["审批资源", "维护项目规则", "管理风险", "管理供应商交付与合同预算", "查看项目参与人"],
-    dataScope: "IT部项目池：软件、硬件、软硬件协同项目，并按内部、外部供应商、合作实现管理交付；不维护系统权限"
-  },
-  {
-    roleId: "pm",
-    visibleModules: ["项目驾驶舱", "产品工作台", "项目管理", "任务与工时", "资源与预算", "绩效与报表"],
-    actions: ["指派产品经理", "以项目经理角色查看 IT部项目池", "以 IT负责人身份统筹资源预算", "管理供应商交付风险", "复核项目经理排期"],
-    dataScope: "IT部全部项目、资源预算、供应商合同、风险和绩效；这是组织负责人身份，不是独立角色"
+    visibleModules: ["工作台", "项目管理", "任务与工时", "资源与预算", "绩效与报表"],
+    actions: ["项目启动", "退回方案确认", "指派开发", "提交项目验收", "管理风险与预算"],
+    dataScope: "唯一项目经理视角：查看全部项目申请、进行中项目、任务完成情况、资源预算和供应商风险"
   },
   {
     roleId: "product",
-    visibleModules: ["需求管理", "产品工作台", "项目管理", "绩效与报表"],
-    actions: ["确认承接", "完成产品评估", "提交项目申请", "组织验收", "查看本人产品绩效"],
+    visibleModules: ["工作台", "需求管理", "流程工作台", "项目管理", "绩效与报表"],
+    actions: ["需求评审", "打回需求", "发起方案确认", "项目验收", "退回项目进行"],
     dataScope: "本人承接或参与分析的需求、关联项目和产品绩效"
   },
   {
     roleId: "requester",
-    visibleModules: ["需求管理"],
-    actions: ["提交需求", "查看本人需求进度", "接收里程碑通知", "提交验收评分"],
-    dataScope: "业务部门本人提交或需要本人验收的需求"
+    visibleModules: ["工作台", "需求管理"],
+    actions: ["提交需求", "发起需求评审", "确认方案", "发起项目申请", "提交验收评分"],
+    dataScope: "业务部门本人提交或需要本人确认、评分的需求"
   },
   {
     roleId: "businessOwner",
-    visibleModules: ["需求管理", "资源与预算", "绩效与报表"],
-    actions: ["以业务角色查看本部门需求", "以部门负责人身份调整优先级", "介入修改", "查看资源投入", "确认验收评分"],
-    dataScope: "业务部门全部需求、验收评分，以及业务部门提出需求对应的资源投入占用；这是组织负责人身份，不是独立角色"
+    visibleModules: ["工作台", "需求管理", "项目管理", "资源与预算", "绩效与报表"],
+    actions: ["查看全部需求-项目", "调整需求重要级别", "查看资源投入", "确认验收评分", "关注延期异常"],
+    dataScope: "业务部门全部需求、关联项目、验收评分，以及本部门提出需求对应的资源投入占用"
   },
   {
     roleId: "developer",
-    visibleModules: ["任务与工时"],
-    actions: ["查看分配任务", "维护任务状态", "填报工时"],
-    dataScope: "IT部开发人员本人任务、日/周/月排期和工时填报"
-  },
-  {
-    roleId: "developer",
-    visibleModules: ["项目驾驶舱", "产品工作台", "任务与工时", "资源与预算", "绩效与报表"],
-    actions: ["以开发角色查看IT部任务", "查看产品承接负载", "查看部门排期", "协调技术联调", "识别高负载人员"],
-    dataScope: "IT部全部产品承接、开发任务、人员排期、技术联调和交付支持；这是组织负责人身份，不是独立角色"
+    visibleModules: ["工作台", "项目管理", "任务与工时"],
+    actions: ["查看本人参与项目", "查看分配任务", "新增/拆分子任务", "维护任务状态", "填报工时", "汇报进度"],
+    dataScope: "IT部开发人员本人参与项目、本人任务、日/周/月排期和工时填报"
   }
 ];

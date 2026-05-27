@@ -1,6 +1,6 @@
 import { ChevronDown, PlayCircle, Settings2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { DemandProjectFlow, FlowActionId, FlowActionLog, FlowBoardAction, FlowLane, FlowNode, FlowNodeStatus } from "../types";
+import type { DemandProjectFlow, FlowActionId, FlowActionLog, FlowBoardAction, FlowLane, FlowNode, FlowNodeStatus, RoleId } from "../types";
 import { Modal, SectionHeader, StatusTag, toneForStatus } from "./ui";
 
 const lanes: FlowLane[] = ["需求方", "产品经理", "项目经理", "开发", "管理层"];
@@ -12,6 +12,7 @@ export function DemandProjectFlowBoard({
   actions = [],
   actionTitle = "流程推进操作",
   logs = [],
+  activeRole = "executive",
   onNodeChange,
   onApplyAction
 }: {
@@ -20,6 +21,7 @@ export function DemandProjectFlowBoard({
   actions?: FlowBoardAction[];
   actionTitle?: string;
   logs?: FlowActionLog[];
+  activeRole?: RoleId;
   onNodeChange?: (flowId: string, nodeId: string, patch: Partial<FlowNode>) => void;
   onApplyAction?: (flowId: string, actionId: FlowActionId, note?: string) => void;
 }) {
@@ -30,6 +32,7 @@ export function DemandProjectFlowBoard({
   const [actionsOpen, setActionsOpen] = useState(false);
   const enabledActions = actions.filter((action) => !action.disabled);
   const groupedActions = groupActions(actions);
+  const configurableCount = flow.nodes.filter((node) => canConfigureNode(activeRole, node, canConfigure)).length;
 
   useEffect(() => {
     setDraft(editing ? { ...editing } : null);
@@ -60,7 +63,7 @@ export function DemandProjectFlowBoard({
       <SectionHeader
         eyebrow={`${flow.id} · ${flow.mode}`}
         title={flow.title}
-        action={<StatusTag tone={canConfigure ? "blue" : "gray"}>{canConfigure ? "可配置" : "只读流程"}</StatusTag>}
+        action={<StatusTag tone={configurableCount > 0 ? "blue" : "gray"}>{configurableCount > 0 ? `可设置 ${configurableCount} 个节点` : "只读流程"}</StatusTag>}
       />
 
       <div className="flow-summary">
@@ -130,6 +133,7 @@ export function DemandProjectFlowBoard({
               lane={lane}
               nodes={flow.nodes}
               canConfigure={canConfigure}
+              activeRole={activeRole}
               onEdit={setEditing}
             />
           ))}
@@ -245,11 +249,13 @@ function FlowLaneRow({
   lane,
   nodes,
   canConfigure,
+  activeRole,
   onEdit
 }: {
   lane: FlowLane;
   nodes: FlowNode[];
   canConfigure: boolean;
+  activeRole: RoleId;
   onEdit: (node: FlowNode) => void;
 }) {
   return (
@@ -259,24 +265,34 @@ function FlowLaneRow({
         <div className="flow-cell" key={`${lane}${node.id}`}>
           {node.lane === lane ? (
             <article className={`flow-node-card ${node.status === "风险" ? "risk" : ""}`}>
-              <div>
-                <strong>{node.name}</strong>
+              <div className="flow-node-card-head">
+                <span className="flow-node-owner">负责人：<strong>{node.owner}</strong></span>
                 <StatusTag tone={node.status === "风险" ? "red" : toneForStatus(node.status)}>{node.status}</StatusTag>
               </div>
               <p>{node.description}</p>
-              <div className="compact-grid">
-                <span>负责人：{node.owner}</span>
-                <span>交付物：{node.deliverable}</span>
-              </div>
-              {canConfigure && node.configurable ? (
+              {canConfigureNode(activeRole, node, canConfigure) ? (
                 <button className="btn secondary node-config-button" onClick={() => onEdit(node)}>
                   <Settings2 size={14} /> 节点设置
                 </button>
               ) : null}
+              <div className="flow-node-deliverable">
+                <span>交付物</span>
+                <strong>{node.deliverable}</strong>
+              </div>
             </article>
           ) : null}
         </div>
       ))}
     </>
   );
+}
+
+function canConfigureNode(activeRole: RoleId, node: FlowNode, canConfigure: boolean) {
+  if (!canConfigure || !node.configurable) return false;
+  if (activeRole === "admin") return true;
+  if (["requester", "businessOwner"].includes(activeRole)) return node.lane === "需求方";
+  if (activeRole === "product") return node.lane === "产品经理";
+  if (activeRole === "pm") return node.lane === "项目经理" || node.stageId === "projectExecution";
+  if (activeRole === "developer") return node.lane === "开发";
+  return false;
 }

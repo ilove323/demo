@@ -1,8 +1,8 @@
 import { ArrowLeft, Star } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DemandProjectFlowBoard } from "../components/DemandProjectFlowBoard";
 import { Modal, ProgressBar, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
-import type { AcceptanceReview, Demand, DemandProjectFlow, FlowActionId, FlowActionLog, FlowBoardAction, Priority, RoleId, RoleOption } from "../types";
+import type { AcceptanceReview, Demand, DemandAnalysis, DemandProjectFlow, FlowActionId, FlowActionLog, FlowBoardAction, Priority, RoleId, RoleOption } from "../types";
 
 const priorities: Priority[] = ["P0", "P1", "P2", "P3"];
 
@@ -16,6 +16,7 @@ export function DemandDetail({
   onBack,
   onPriorityChange,
   onSubmitReview,
+  onUpdateAnalysis,
   onApplyFlowAction,
   onAssignWork
 }: {
@@ -28,6 +29,7 @@ export function DemandDetail({
   onBack: () => void;
   onPriorityChange: (id: string, priority: Priority) => void;
   onSubmitReview: (id: string, review: AcceptanceReview) => void;
+  onUpdateAnalysis: (id: string, analysis: DemandAnalysis, summary: string) => void;
   onApplyFlowAction: (flowId: string, actionId: FlowActionId, note?: string) => void;
   onAssignWork: (targetUserName: string, relatedType: "demand" | "project" | "task" | "resource" | "flow", relatedId: string, summary: string) => void;
 }) {
@@ -35,9 +37,28 @@ export function DemandDetail({
   const [reviewScore, setReviewScore] = useState(String(demand.acceptanceReview?.score ?? "4.7"));
   const [reviewConclusion, setReviewConclusion] = useState(demand.acceptanceReview?.conclusion ?? "通过验收");
   const [reviewComment, setReviewComment] = useState(demand.acceptanceReview?.comment ?? "交付结果符合业务预期，关键流程可正常使用。");
+  const [analysisDraft, setAnalysisDraft] = useState({
+    feasibility: demand.analysis.feasibility,
+    valueScore: String(demand.analysis.valueScore),
+    implementationReason: demand.analysis.implementationReason,
+    resourcePlan: demand.analysis.resourcePlan,
+    iteration: demand.analysis.iteration
+  });
+  const [analysisNote, setAnalysisNote] = useState("已补充价值评分、迭代版本、资源方案和实现决策。");
 
   const demandActions = flow ? getDemandDetailActions(activeRole, flow) : [];
   const selectedFlowLogs = flow ? flowActionLogs.filter((log) => log.flowId === flow.id) : [];
+  const canEditProductReview = ["admin", "product"].includes(activeRole) && flow?.currentNodeId === "demandReview";
+
+  useEffect(() => {
+    setAnalysisDraft({
+      feasibility: demand.analysis.feasibility,
+      valueScore: String(demand.analysis.valueScore),
+      implementationReason: demand.analysis.implementationReason,
+      resourcePlan: demand.analysis.resourcePlan,
+      iteration: demand.analysis.iteration
+    });
+  }, [demand.id, demand.analysis]);
 
   function submitReview() {
     onSubmitReview(demand.id, {
@@ -51,6 +72,32 @@ export function DemandDetail({
       onApplyFlowAction(flow.id, "requester.submitScore", `${reviewConclusion}，评分 ${reviewScore}/5：${reviewComment}`);
     }
     setReviewing(false);
+  }
+
+  function productReviewAnalysis(): DemandAnalysis {
+    return {
+      feasibility: analysisDraft.feasibility.trim(),
+      valueScore: clampScore(Number(analysisDraft.valueScore) || 0),
+      implementationReason: analysisDraft.implementationReason.trim(),
+      resourcePlan: analysisDraft.resourcePlan.trim(),
+      iteration: analysisDraft.iteration.trim()
+    };
+  }
+
+  function saveProductReview() {
+    onUpdateAnalysis(demand.id, productReviewAnalysis(), analysisNote.trim() || "产品经理更新需求评审字段。");
+  }
+
+  function submitSolutionFromReview() {
+    const nextAnalysis = productReviewAnalysis();
+    const note = `${analysisNote.trim() || "产品经理完成需求评审。"} 价值评分 ${nextAnalysis.valueScore}，迭代 ${nextAnalysis.iteration}，资源方案：${nextAnalysis.resourcePlan}`;
+    onUpdateAnalysis(demand.id, nextAnalysis, note);
+    if (flow) onApplyFlowAction(flow.id, "product.submitSolution", note);
+  }
+
+  function returnDemandFromReview() {
+    const note = analysisNote.trim() || "资料不足，需需求方补充背景、目标、价值或附件。";
+    if (flow) onApplyFlowAction(flow.id, "product.returnDemand", note);
   }
 
   return (
@@ -115,11 +162,32 @@ export function DemandDetail({
             </div>
           </div>
 
+          {canEditProductReview ? (
+            <div className="panel product-review-editor">
+              <SectionHeader title="产品经理需求评审填写" action={<StatusTag tone="blue">阶段1：需求评审</StatusTag>} />
+              <div className="form-grid">
+                <label>价值评分<input value={analysisDraft.valueScore} onChange={(event) => setAnalysisDraft((draft) => ({ ...draft, valueScore: event.target.value }))} /></label>
+                <label>迭代版本<input value={analysisDraft.iteration} onChange={(event) => setAnalysisDraft((draft) => ({ ...draft, iteration: event.target.value }))} /></label>
+                <label className="wide">业务价值 / 可行性<textarea value={analysisDraft.feasibility} onChange={(event) => setAnalysisDraft((draft) => ({ ...draft, feasibility: event.target.value }))} /></label>
+                <label className="wide">资源方案<textarea value={analysisDraft.resourcePlan} onChange={(event) => setAnalysisDraft((draft) => ({ ...draft, resourcePlan: event.target.value }))} /></label>
+                <label className="wide">实现决策<textarea value={analysisDraft.implementationReason} onChange={(event) => setAnalysisDraft((draft) => ({ ...draft, implementationReason: event.target.value }))} /></label>
+                <label className="wide">评审留言 / 附件说明<textarea value={analysisNote} onChange={(event) => setAnalysisNote(event.target.value)} /></label>
+              </div>
+              <div className="split-actions">
+                <button className="btn secondary" type="button" onClick={returnDemandFromReview}>打回需求</button>
+                <button className="btn secondary" type="button" onClick={saveProductReview}>保存评审字段</button>
+                <button className="btn" type="button" onClick={submitSolutionFromReview}>保存并发起方案确认</button>
+              </div>
+            </div>
+          ) : null}
+
           {flow ? (
             <div className="panel">
               <SectionHeader title="0-6 阶段泳道图" />
               <DemandProjectFlowBoard
                 flow={flow}
+                canConfigure
+                activeRole={activeRole}
                 actions={demandActions}
                 actionTitle="需求与产品业务动作"
                 logs={selectedFlowLogs}
@@ -137,7 +205,7 @@ export function DemandDetail({
                 <span className="muted-text">{demand.acceptanceReview.reviewer} · {demand.acceptanceReview.date}</span>
               </div>
             ) : (
-              <div className="empty-state"><strong>待业务验收评分</strong><span>等待业务提交验收结论。</span></div>
+              <div className="empty-state"><strong>待需求方验收评分</strong><span>等待需求方提交验收结论。</span></div>
             )}
           </div>
         </div>
@@ -159,10 +227,10 @@ export function DemandDetail({
                 {activeUser.isDepartmentOwner ? (
                   <div className="assignment-strip compact">
                     <div>
-                      <strong>业务确认 / 验收</strong>
+                      <strong>需求方确认 / 验收</strong>
                       <span>当前提出人：{demand.requester}</span>
                     </div>
-                    <button className="btn" type="button" onClick={() => onAssignWork("沈岚", "demand", demand.id, `${demand.name} 的业务确认和验收`)}>
+                    <button className="btn" type="button" onClick={() => onAssignWork("沈岚", "demand", demand.id, `${demand.name} 的需求方确认和验收`)}>
                       分配给沈岚
                     </button>
                   </div>
@@ -302,4 +370,8 @@ function getDemandDetailActions(activeRole: RoleId, flow: DemandProjectFlow): Fl
     );
   }
   return actions;
+}
+
+function clampScore(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)));
 }

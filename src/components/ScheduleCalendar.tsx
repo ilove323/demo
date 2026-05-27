@@ -9,16 +9,17 @@ export function ScheduleCalendar({
   title,
   subtitle,
   entries,
-  defaultMode = "week"
+  defaultMode = "week",
+  onEntryClick
 }: {
   title: string;
   subtitle?: string;
   entries: ResourceCalendarEntry[];
   defaultMode?: CalendarViewMode;
+  onEntryClick?: (entry: ResourceCalendarEntry) => void;
 }) {
   const [mode, setMode] = useState<CalendarViewMode>(defaultMode);
   const [cursorDate, setCursorDate] = useState(() => entries[0]?.date ?? "2026-05-25");
-  const [selectedEntry, setSelectedEntry] = useState<ResourceCalendarEntry | null>(null);
   const orderedEntries = useMemo(
     () =>
       [...entries].sort((a, b) =>
@@ -63,7 +64,7 @@ export function ScheduleCalendar({
             ))}
           </div>
           <div className="calendar-day-list">
-            {dayEntries.length > 0 ? dayEntries.map((entry) => <ScheduleBlock entry={entry} key={scheduleEntryKey(entry)} onSelect={setSelectedEntry} selected={selectedEntry ? scheduleEntryKey(selectedEntry) === scheduleEntryKey(entry) : false} />) : (
+            {dayEntries.length > 0 ? dayEntries.map((entry) => <ScheduleBlock entry={entry} key={scheduleEntryKey(entry)} onSelect={onEntryClick} />) : (
               <div className="calendar-empty">当天暂无排期</div>
             )}
           </div>
@@ -80,7 +81,7 @@ export function ScheduleCalendar({
                   <strong>{day.month}/{day.day}</strong>
                 </div>
                 <div className="calendar-cell-events">
-                  {entriesForDay.length > 0 ? entriesForDay.map((entry) => <ScheduleBlock entry={entry} key={scheduleEntryKey(entry)} onSelect={setSelectedEntry} selected={selectedEntry ? scheduleEntryKey(selectedEntry) === scheduleEntryKey(entry) : false} />) : (
+                  {entriesForDay.length > 0 ? entriesForDay.map((entry) => <ScheduleBlock entry={entry} key={scheduleEntryKey(entry)} onSelect={onEntryClick} />) : (
                     <div className="calendar-empty">无排期</div>
                   )}
                 </div>
@@ -102,7 +103,7 @@ export function ScheduleCalendar({
                 </div>
                 <div className="calendar-cell-events">
                   {entriesForDay.slice(0, 2).map((entry) => (
-                    <ScheduleBlock compact entry={entry} key={scheduleEntryKey(entry)} onSelect={setSelectedEntry} selected={selectedEntry ? scheduleEntryKey(selectedEntry) === scheduleEntryKey(entry) : false} />
+                    <ScheduleBlock compact entry={entry} key={scheduleEntryKey(entry)} onSelect={onEntryClick} />
                   ))}
                   {entriesForDay.length > 2 ? <small>另 {entriesForDay.length - 2} 项</small> : null}
                 </div>
@@ -112,15 +113,6 @@ export function ScheduleCalendar({
           })}
         </div>
       ) : null}
-      {selectedEntry ? (
-        <div className="calendar-selected-detail">
-          <div>
-            <strong>{selectedEntry.task}</strong>
-            <StatusTag tone={toneForStatus(selectedEntry.status)}>{selectedEntry.status}</StatusTag>
-          </div>
-          <CalendarDetailItems entry={selectedEntry} />
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -128,16 +120,14 @@ export function ScheduleCalendar({
 function ScheduleBlock({
   entry,
   compact = false,
-  selected = false,
   onSelect
 }: {
   entry: ResourceCalendarEntry;
   compact?: boolean;
-  selected?: boolean;
-  onSelect: (entry: ResourceCalendarEntry) => void;
+  onSelect?: (entry: ResourceCalendarEntry) => void;
 }) {
   return (
-    <button className={`${compact ? "schedule-block compact" : "schedule-block"} tone-${toneForStatus(entry.status)}${selected ? " selected" : ""}`} type="button" onClick={() => onSelect(entry)}>
+    <button className={`${compact ? "schedule-block compact" : "schedule-block"} tone-${toneForStatus(entry.status)}`} type="button" onClick={() => onSelect?.(entry)}>
       <div>
         <span>{entry.timeSlot} · {entry.hours}h</span>
         <StatusTag tone={toneForStatus(entry.status)}>{entry.status}</StatusTag>

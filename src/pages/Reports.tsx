@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
-import { projectInvestmentBreakdowns, projects, resourcePeople, supplierBudgets } from "../data";
+import { demands as seedDemands, projectInvestmentBreakdowns, projects, resourcePeople, supplierBudgets } from "../data";
 import { FilterPanel } from "../components/FilterPanel";
 import { MetricCard, ProgressBar, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
 import type { Demand, DemandProjectFlow, Project, RoleId, RoleOption, Task, Tone } from "../types";
@@ -34,6 +34,7 @@ interface DetailRow {
   metric: string;
   status: string;
   note: string;
+  projectId?: string;
 }
 
 const allOption = "全部";
@@ -49,7 +50,7 @@ const domainLabels: Record<ReportDomain, string> = {
   project: "项目绩效",
   product: "产品绩效",
   engineering: "开发交付",
-  operations: "业务验收",
+  operations: "需求方验收",
   supplier: "供应商绩效",
   budget: "资源预算"
 };
@@ -61,13 +62,15 @@ export function Reports({
   activeUser,
   demands,
   tasks,
-  flows
+  flows,
+  onOpenProjectDetail
 }: {
   activeRole: RoleId;
   activeUser: RoleOption;
   demands: Demand[];
   tasks: Task[];
   flows: DemandProjectFlow[];
+  onOpenProjectDetail: (id: string) => void;
 }) {
   const allowedDomains = useMemo(() => getAllowedDomains(activeRole), [activeRole]);
   const defaultDomain = allowedDomains[0];
@@ -273,16 +276,23 @@ export function Reports({
         tasks={filteredTasks}
         suppliers={filteredSuppliers}
         investments={filteredInvestments}
+        onOpenProjectDetail={onOpenProjectDetail}
       />
 
       <div className="grid-2">
         <div className="panel">
           <SectionHeader eyebrow="DETAIL" title="绩效明细" />
           <table className="data-table">
-            <thead><tr><th>对象</th><th>维度</th><th>核心指标</th><th>状态</th><th>说明</th></tr></thead>
+            <thead><tr><th>{effectiveDomain === "overview" || effectiveDomain === "project" ? "项目" : "对象"}</th><th>维度</th><th>核心指标</th><th>状态</th><th>说明</th></tr></thead>
             <tbody>
               {detailRows.map((row) => (
-                <tr key={`${row.name}${row.dimension}`}>
+                <tr
+                  className={row.projectId ? "clickable" : ""}
+                  key={`${row.name}${row.dimension}`}
+                  onClick={() => {
+                    if (row.projectId) onOpenProjectDetail(row.projectId);
+                  }}
+                >
                   <td><strong>{row.name}</strong></td>
                   <td>{row.dimension}</td>
                   <td>{row.metric}</td>
@@ -319,7 +329,8 @@ function ReportDomainPanels({
   demands,
   tasks,
   suppliers,
-  investments
+  investments,
+  onOpenProjectDetail
 }: {
   activeRole: RoleId;
   domain: ReportDomain;
@@ -328,25 +339,20 @@ function ReportDomainPanels({
   tasks: Task[];
   suppliers: typeof supplierBudgets;
   investments: typeof projectInvestmentBreakdowns;
+  onOpenProjectDetail: (id: string) => void;
 }) {
   const taskProjects = projects.filter((project) => tasks.some((task) => task.project === project.name));
   const visibleProjectSet = taskProjects.length > 0 ? taskProjects : projects;
   const stageData = chartDataOrEmpty(countBy(projects, (project) => project.stage), "暂无项目");
   const riskData = chartDataOrEmpty(countBy(projects, (project) => project.risk), "暂无风险");
   const taskStatus = chartDataOrEmpty(statusDistribution(tasks), "暂无任务");
-  const budgetRows = projects.map((project) => ({
-    name: shortLabel(project.name),
-    progress: project.progress,
-    usage: percent(project.usedBudget, project.budget),
-    risk: project.risk
-  }));
   const acceptanceData = acceptanceScoreData(demands);
 
   if (activeRole === "pm") {
     return (
       <div className="report-board">
         <div className="panel report-panel-wide"><SectionHeader eyebrow="FLOW" title="负责项目阶段推进" /><FlowStackChart data={stageData} /></div>
-        <div className="panel"><SectionHeader eyebrow="BUDGET" title="进度 / 预算燃尽" /><BudgetBurnChart rows={budgetRows} /></div>
+        <div className="panel"><SectionHeader eyebrow="BUDGET" title="进度 / 预算燃尽" /><BudgetBurnChart projects={projects} onOpenProjectDetail={onOpenProjectDetail} /></div>
         <div className="panel"><SectionHeader eyebrow="RISK" title="项目风险矩阵" /><RiskMatrix projects={projects} /></div>
         <div className="panel"><SectionHeader eyebrow="SUPPLIER" title="供应商交付评分卡" /><SupplierScorecards suppliers={suppliers} /></div>
         <div className="panel report-panel-wide"><SectionHeader eyebrow="CONTROL" title="任务工时偏差分析" /><CycleTimeChart tasks={tasks} /></div>
@@ -379,7 +385,7 @@ function ReportDomainPanels({
   if (domain === "operations") {
     return (
       <div className="report-board">
-        <div className="panel report-panel-wide"><SectionHeader eyebrow="ACCEPTANCE" title="业务验收评分分布" /><ScoreDistribution data={acceptanceData} /></div>
+        <div className="panel report-panel-wide"><SectionHeader eyebrow="ACCEPTANCE" title="需求方验收评分分布" /><ScoreDistribution data={acceptanceData} /></div>
         <div className="panel"><SectionHeader eyebrow="PRIORITY" title="业务需求优先级" /><DistributionDonut data={countBy(demands, (demand) => demand.priority)} /></div>
         <div className="panel"><SectionHeader eyebrow="INVESTMENT" title="业务投入热度" /><InvestmentHeatmap investments={investments} /></div>
         <div className="panel"><SectionHeader eyebrow="REQUESTER" title="提出人结构" /><RankedList data={countBy(demands, (demand) => demand.requester)} suffix="个" /></div>
@@ -401,7 +407,7 @@ function ReportDomainPanels({
   if (domain === "budget") {
     return (
       <div className="report-board">
-        <div className="panel report-panel-wide"><SectionHeader eyebrow="BUDGET" title="预算燃尽与进度偏差" /><BudgetBurnChart rows={budgetRows} /></div>
+        <div className="panel report-panel-wide"><SectionHeader eyebrow="BUDGET" title="预算燃尽与进度偏差" /><BudgetBurnChart projects={projects} onOpenProjectDetail={onOpenProjectDetail} /></div>
         <div className="panel"><SectionHeader eyebrow="MIX" title="内外部投入结构" /><InvestmentMix investments={investments} /></div>
         <div className="panel"><SectionHeader eyebrow="INTERNAL" title="内部人天热力" /><InvestmentHeatmap investments={investments} /></div>
         <div className="panel"><SectionHeader eyebrow="SUPPLIER" title="外部合同使用率" /><ContractUsage suppliers={suppliers} /></div>
@@ -414,8 +420,8 @@ function ReportDomainPanels({
       <div className="panel report-panel-wide"><SectionHeader eyebrow="PORTFOLIO" title="项目组合健康度" /><PortfolioHealth projects={projects} /></div>
       <div className="panel"><SectionHeader eyebrow="FLOW" title="阶段流量" /><FlowStackChart data={stageData} compact /></div>
       <div className="panel"><SectionHeader eyebrow="RISK" title="风险矩阵" /><RiskMatrix projects={projects} /></div>
-      <div className="panel"><SectionHeader eyebrow="BUDGET" title="预算燃尽" /><BudgetBurnChart rows={budgetRows} /></div>
-      <div className="panel report-panel-wide"><SectionHeader eyebrow="ACCEPTANCE" title="验收与价值趋势" /><TrendAreaChart data={acceptanceTrend(demands)} suffix="分" /></div>
+      <div className="panel"><SectionHeader eyebrow="BUDGET" title="预算燃尽" /><BudgetBurnChart projects={projects} onOpenProjectDetail={onOpenProjectDetail} /></div>
+      <div className="panel report-panel-wide"><SectionHeader eyebrow="ACCEPTANCE" title="验收与价值趋势" /><AcceptanceValueChart demands={demands} /></div>
     </div>
   );
 }
@@ -467,6 +473,62 @@ function FlowStackChart({ data, compact = false }: { data: { label: string; valu
             <strong>{item.value}</strong>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function AcceptanceValueChart({ demands }: { demands: Demand[] }) {
+  const rows = acceptanceValueRows(demands);
+  if (rows.length === 0) {
+    return (
+      <div className="acceptance-value-chart empty-state">
+        <strong>暂无可统计数据</strong>
+        <span>当前筛选范围内没有目标日期或验收评分。</span>
+      </div>
+    );
+  }
+  return (
+    <div className="acceptance-value-chart">
+      <div className="acceptance-value-head">
+        <span>月份</span>
+        <span>需求价值均分</span>
+        <span>验收均分</span>
+        <span>验收量</span>
+      </div>
+      {rows.map((row) => (
+        <div className="acceptance-value-row" key={row.key}>
+          <div className="acceptance-month">
+            <strong>{row.label}</strong>
+            <span>{row.targetCount} 个目标到期</span>
+          </div>
+          <div className="acceptance-bar-cell">
+            <div className="acceptance-bar-meta">
+              <span>价值</span>
+              <strong>{row.valueAverage ? `${row.valueAverage}分` : "无目标需求"}</strong>
+            </div>
+            <div className="acceptance-track value">
+              <i style={{ width: `${row.valueAverage}%` }} />
+            </div>
+          </div>
+          <div className="acceptance-bar-cell">
+            <div className="acceptance-bar-meta">
+              <span>验收</span>
+              <strong>{row.acceptanceAverage ? `${row.acceptanceAverage}/5` : "未验收"}</strong>
+            </div>
+            <div className="acceptance-track score">
+              <i style={{ width: `${row.acceptanceAverage ? (row.acceptanceAverage / 5) * 100 : 0}%` }} />
+            </div>
+          </div>
+          <div className="acceptance-count">
+            <strong>{row.acceptanceCount}</strong>
+            <span>{row.acceptanceNames.length ? row.acceptanceNames.join("、") : "本月无评分"}</span>
+          </div>
+        </div>
+      ))}
+      <div className="acceptance-value-note">
+        <span>价值均分来自需求评审评分，按目标日期月份聚合。</span>
+        <span>验收均分来自需求方验收评分，按验收日期月份聚合。</span>
       </div>
     </div>
   );
@@ -524,12 +586,20 @@ function RiskMatrix({ projects: visibleProjects }: { projects: Project[] }) {
   );
 }
 
-function BudgetBurnChart({ rows }: { rows: { name: string; progress: number; usage: number; risk: string }[] }) {
-  const safeRows = rows.length ? rows : [{ name: "暂无项目", progress: 0, usage: 0, risk: "低" }];
+function BudgetBurnChart({ projects: visibleProjects, onOpenProjectDetail }: { projects: Project[]; onOpenProjectDetail: (id: string) => void }) {
+  const safeRows = visibleProjects.length
+    ? visibleProjects.map((project) => ({
+        id: project.id,
+        name: shortLabel(project.name),
+        progress: project.progress,
+        usage: percent(project.usedBudget, project.budget),
+        risk: project.risk
+      }))
+    : [{ id: "", name: "暂无项目", progress: 0, usage: 0, risk: "低" }];
   return (
     <div className="budget-burn">
       {safeRows.slice(0, 6).map((row) => (
-        <div className="budget-row" key={row.name}>
+        <button className={row.id ? "budget-row clickable-card" : "budget-row"} key={row.name} onClick={() => row.id && onOpenProjectDetail(row.id)} type="button">
           <div className="budget-row-head">
             <strong>{row.name}</strong>
             <StatusTag tone={toneForStatus(row.risk)}>{row.risk}</StatusTag>
@@ -544,7 +614,7 @@ function BudgetBurnChart({ rows }: { rows: { name: string; progress: number; usa
             <ProgressBar value={row.usage} />
             <b>{row.usage}%</b>
           </div>
-        </div>
+        </button>
       ))}
     </div>
   );
@@ -913,8 +983,8 @@ function buildMetrics(
     return [
       { label: "业务需求量", value: String(visibleDemands.length), delta: "本部门需求池", tone: "blue" },
       { label: "P0/P1 占比", value: `${percent(important, visibleDemands.length)}%`, delta: `${important} 个高优先级`, tone: "orange" },
-      { label: "平均验收评分", value: averageReview ? averageReview.toFixed(1) : "暂无", delta: "来自业务验收", tone: "violet" },
-      { label: "项目验收", value: String(visibleDemands.filter((demand) => demand.status === "项目验收").length), delta: "需业务确认", tone: "green" }
+      { label: "平均验收评分", value: averageReview ? averageReview.toFixed(1) : "暂无", delta: "来自需求方验收", tone: "violet" },
+      { label: "项目验收", value: String(visibleDemands.filter((demand) => demand.status === "项目验收").length), delta: "需需求方确认", tone: "green" }
     ];
   }
   if (domain === "supplier") {
@@ -952,13 +1022,14 @@ function buildDetailRows(
   visibleInvestments: typeof projectInvestmentBreakdowns,
   visibleFlows: DemandProjectFlow[]
 ): DetailRow[] {
-  if (role === "pm") {
+  if (domain === "project" || (role === "pm" && domain === "overview")) {
     return visibleProjects.slice(0, 8).map((project) => ({
       name: project.name,
-      dimension: `项目经理：${project.owner}`,
+      projectId: project.id,
+      dimension: `产品经理：${productOwnerForProject(project)} · ${project.implementation}`,
       metric: `进度 ${project.progress}% · 预算 ${percent(project.usedBudget, project.budget)}%`,
       status: project.risk,
-      note: project.supplierManager === "无外部供应商" ? "纯内部实现，关注开发资源负载" : `供应商治理：${project.supplierManager}`
+      note: projectDeliveryNote(project)
     }));
   }
   if (domain === "engineering") {
@@ -1008,10 +1079,11 @@ function buildDetailRows(
   }
   return visibleProjects.slice(0, 8).map((project) => ({
     name: project.name,
+    projectId: project.id,
     dimension: `${project.projectType} · ${project.implementation}`,
     metric: `进度 ${project.progress}% · 偏差 ${budgetDeviation(project)}%`,
     status: project.risk,
-    note: project.riskResponse
+    note: projectDeliveryNote(project)
   }));
 }
 
@@ -1032,7 +1104,7 @@ function buildInsights(
 
   if (role === "pm") {
     return [
-      { type: "风险", tone: highRiskProject ? "red" as Tone : "green" as Tone, title: highRiskProject?.name ?? "负责项目无高风险", body: highRiskProject?.riskResponse ?? "当前负责项目没有高风险事项。" },
+      { type: "风险", tone: highRiskProject ? "red" as Tone : "green" as Tone, title: highRiskProject?.name ?? "负责项目无高风险", body: highRiskProject ? projectDeliveryNote(highRiskProject) : "当前负责项目没有高风险事项。" },
       { type: "预算", tone: "orange" as Tone, title: `平均预算偏差 ${Math.round(average(visibleProjects.map(budgetDeviation)))}%`, body: "项目经理重点看预算使用率是否明显快于项目进度。" },
       { type: "供应商", tone: "violet" as Tone, title: `${visibleSuppliers.length} 条供应商合同`, body: "供应商付款、交付状态和风险需要与里程碑一起看。" }
     ];
@@ -1047,7 +1119,7 @@ function buildInsights(
   if (domain === "product") {
     return [
       { type: "价值", tone: "violet" as Tone, title: `平均价值 ${Math.round(average(visibleDemands.map((demand) => demand.analysis.valueScore)))}`, body: "可结合实现方式和资源申请状态决定下一批迭代优先级。" },
-      { type: "流程", tone: "blue" as Tone, title: `${visibleProjects.length} 个需求已转项目`, body: "资源申请、业务确认和验收节点应在产品工作台继续跟进。" },
+      { type: "流程", tone: "blue" as Tone, title: `${visibleProjects.length} 个需求已转项目`, body: "资源申请、方案确认和验收节点应在流程工作台继续跟进。" },
       { type: "待办", tone: "orange" as Tone, title: pendingDemand?.name ?? "暂无关键待办", body: pendingDemand ? `${pendingDemand.status} · ${pendingDemand.objective}` : "暂无项目验收或需求评审需求。" }
     ];
   }
@@ -1066,10 +1138,41 @@ function buildInsights(
     ];
   }
   return [
-    { type: "风险", tone: highRiskProject ? "red" as Tone : "green" as Tone, title: highRiskProject?.name ?? "无高风险项目", body: highRiskProject?.riskResponse ?? "风险处于可控状态。" },
+    { type: "风险", tone: highRiskProject ? "red" as Tone : "green" as Tone, title: highRiskProject?.name ?? "无高风险项目", body: highRiskProject ? projectDeliveryNote(highRiskProject) : "风险处于可控状态。" },
     { type: "预算", tone: "orange" as Tone, title: `预算使用率 ${percent(visibleProjects.reduce((sum, project) => sum + project.usedBudget, 0), visibleProjects.reduce((sum, project) => sum + project.budget, 0))}%`, body: "预算偏差需要结合项目进度、供应商付款和内部人天一起判断。" },
     { type: "交付", tone: "blue" as Tone, title: `${visibleProjects.filter((project) => project.stage === "验收完成").length} 个项目验收完成`, body: "可切换项目绩效或资源预算域查看下钻指标。" }
   ];
+}
+
+function productOwnerForProject(project: Project) {
+  const demand = seedDemands.find((item) => item.id === project.demandId);
+  return demand?.handler.replace(" / 产品", "") ?? "未分配";
+}
+
+function projectDeliveryNote(project: Project) {
+  const productOwner = productOwnerForProject(project);
+  if (project.id === "PRJ-126") {
+    return `${productOwner}推动主数据冻结和接口联调计划；项目经理已完成接口开发与测试资源指派，开发按任务推进，若 6 月 3 日前未完成则拆分非关键接口二期上线。`;
+  }
+  if (project.id === "PRJ-124") {
+    return `${productOwner}组织供应商评分并收敛合规方案；项目经理只在资源窗口合适后启动项目，开发与供应商按确认方案执行。`;
+  }
+  if (project.id === "PRJ-119") {
+    return `${productOwner}已发起业务部门验收邀请；开发和供应商补齐验证包、上线检查表和归档材料。`;
+  }
+  if (project.id === "PRJ-116") {
+    return `${productOwner}将口径冻结会提前到 5 月 31 日；开发按已指派任务完成权限模型和审计日志底座。`;
+  }
+  if (project.id === "PRJ-108") {
+    return "进入运维观察期，LIMS 供应商保留 2 周问题响应窗口，需求方已完成验收评分。";
+  }
+  if (project.id === "PRJ-131") {
+    return "先上线 12 卡试运行环境，完整集群等待第二批设备到货；管理层周会确认扩容预算。";
+  }
+  if (project.id === "PRJ-097") {
+    return `${productOwner}确认外部供应商实施方案；项目经理启动后锁定供应商踏勘和施工窗口，避免影响季度合规培训。`;
+  }
+  return project.riskResponse;
 }
 
 function countDomainObjects(domain: ReportDomain, visibleProjects: Project[], visibleDemands: Demand[], visibleTasks: Task[], visibleSuppliers: typeof supplierBudgets) {
@@ -1116,15 +1219,37 @@ function demandTrend(demands: Demand[]) {
   });
 }
 
-function acceptanceTrend(demands: Demand[]) {
-  const scored = demands
-    .map((demand) => demand.acceptanceReview?.score ?? demand.score ?? 0)
-    .filter(Boolean);
-  const averageScore = average(scored);
-  return ["2月", "3月", "4月", "5月", "6月", "7月"].map((label, index) => ({
-    label,
-    value: Number(Math.min(5, Math.max(0, averageScore + (index - 3) * 0.08)).toFixed(1))
-  }));
+function acceptanceValueRows(demands: Demand[]) {
+  const buckets = new Map<string, { target: Demand[]; accepted: Demand[] }>();
+  const ensure = (key: string) => {
+    if (!buckets.has(key)) buckets.set(key, { target: [], accepted: [] });
+    return buckets.get(key)!;
+  };
+
+  demands.forEach((demand) => {
+    const targetKey = monthKey(demand.targetDate);
+    if (targetKey) ensure(targetKey).target.push(demand);
+    const score = demand.acceptanceReview?.score ?? demand.score;
+    const acceptanceKey = monthKey(demand.acceptanceReview?.date ?? (score ? demand.targetDate : ""));
+    if (score && acceptanceKey) ensure(acceptanceKey).accepted.push(demand);
+  });
+
+  return Array.from(buckets.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, bucket]) => {
+      const valueAverage = Math.round(average(bucket.target.map((demand) => demand.analysis.valueScore)));
+      const acceptanceScores = bucket.accepted.map((demand) => demand.acceptanceReview?.score ?? demand.score ?? 0);
+      const acceptanceAverage = acceptanceScores.length ? Number(average(acceptanceScores).toFixed(1)) : 0;
+      return {
+        key,
+        label: monthLabel(key),
+        targetCount: bucket.target.length,
+        valueAverage,
+        acceptanceAverage,
+        acceptanceCount: bucket.accepted.length,
+        acceptanceNames: bucket.accepted.map((demand) => shortLabel(demand.name))
+      };
+    });
 }
 
 function budgetDeviation(project: Project) {
@@ -1182,6 +1307,16 @@ function percent(value: number, total: number) {
 
 function formatMoney(value: number) {
   return `${Math.round(value / 10000)}万`;
+}
+
+function monthKey(value: string) {
+  const match = value.match(/^(\d{4})-(\d{2})-\d{2}$/);
+  return match ? `${match[1]}-${match[2]}` : "";
+}
+
+function monthLabel(key: string) {
+  const [year, month] = key.split("-");
+  return `${year}年${Number(month)}月`;
 }
 
 function shortLabel(value: string) {

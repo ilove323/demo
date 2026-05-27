@@ -277,6 +277,7 @@ export interface Task {
   status: TaskStatus;
   estimate: number;
   actual: number;
+  startDate?: string;
   due: string;
   role: string;
   description: string;

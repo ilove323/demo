@@ -112,10 +112,6 @@ export function AppLayout({
           <div className="sidebar-role-icon" title={`切换身份：${roleText}`}>
             <UserRound size={18} />
           </div>
-          <div className="sidebar-foot">
-            <span>MCP / 企业微信</span>
-            <strong>集成配置</strong>
-          </div>
         </div>
       </aside>
 

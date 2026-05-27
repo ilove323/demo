@@ -1,5 +1,5 @@
 import { ArrowRight, CheckCircle2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { productWorkflowItems } from "../data";
 import { DemandProjectFlowBoard } from "../components/DemandProjectFlowBoard";
 import { FilterPanel } from "../components/FilterPanel";
@@ -7,6 +7,7 @@ import type { DeliveryRequest, Demand, DemandProjectFlow, FlowActionId, FlowActi
 import { MetricCard, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
 
 const allOption = "全部";
+const demandStatusOrder = ["草稿", "需求评审", "方案确认", "项目启动", "项目进行", "项目验收", "验收完成"];
 
 export function ProductWorkflow({
   demands: liveDemands,
@@ -61,6 +62,10 @@ export function ProductWorkflow({
     () => unique([...productWorkflowItems.map((item) => item.stage), ...flows.flatMap((flow) => flow.nodes.map((node) => node.name))]),
     [flows]
   );
+  const demandStatusOptions = useMemo(() => {
+    const liveStatuses = unique(liveDemands.map((demand) => demand.status));
+    return [...demandStatusOrder, ...liveStatuses.filter((status) => !demandStatusOrder.includes(status))];
+  }, [liveDemands]);
   const flowStatusOptions = useMemo(
     () => unique([...productWorkflowItems.map((item) => item.status), ...flows.flatMap((flow) => flow.nodes.map((node) => node.status))]),
     [flows]
@@ -168,12 +173,18 @@ export function ProductWorkflow({
   );
   const pendingAnalysis = filteredDemands.filter((demand) => demand.status === "需求评审");
   const acceptance = filteredDemands.filter((demand) => demand.status === "项目验收");
-  const productEvaluationItems = filteredWorkflowItems.filter((item) => item.stage === "产品评估").length;
-  const projectRequestItems = filteredWorkflowItems.filter((item) => item.stage === "项目申请").length;
-  const pendingDeliveryRequests = filteredDeliveryRequests.filter((item) => ["草稿", "退回方案确认", "待项目经理启动"].includes(item.status));
+  const solutionConfirmItems = filteredWorkflowItems.filter((item) => item.stage === "方案确认").length;
+  const projectStartItems = filteredWorkflowItems.filter((item) => item.stage === "项目启动").length;
+  const pendingDeliveryRequests = filteredDeliveryRequests.filter((item) => ["方案确认中", "退回方案确认", "待项目经理启动"].includes(item.status));
   const selectedFlow = filteredFlows.find((flow) => flow.id === selectedFlowId) ?? filteredFlows[0];
   const selectedFlowLogs = selectedFlow ? flowActionLogs.filter((log) => log.flowId === selectedFlow.id) : [];
   const productActions = selectedFlow ? getProductFlowActions(activeRole, selectedFlow) : [];
+  useEffect(() => {
+    const actionableFlow = filteredFlows.find((flow) => getProductFlowActions(activeRole, flow).some((action) => !action.disabled));
+    if (actionableFlow && selectedFlowId !== actionableFlow.id && !getProductFlowActions(activeRole, selectedFlow ?? actionableFlow).some((action) => !action.disabled)) {
+      setSelectedFlowId(actionableFlow.id);
+    }
+  }, [activeRole, filteredFlows, selectedFlow, selectedFlowId]);
   const activeFilterCount = countActiveFilters(filters, {
     keyword: "",
     demandStatus: allOption,
@@ -200,20 +211,20 @@ export function ProductWorkflow({
     <section className="page">
       <div className="page-title">
         <div>
-          <h1>产品工作台</h1>
+          <h1>流程工作台</h1>
         </div>
         <StatusTag tone="violet">待处理 {pendingAnalysis.length + pendingDeliveryRequests.length + acceptance.length}</StatusTag>
       </div>
 
       <div className="grid-4">
-        <MetricCard label="待承接/评估" value={String(pendingAnalysis.length)} delta="产品侧待推进" tone="orange" />
-        <MetricCard label="项目申请" value={String(pendingDeliveryRequests.length + projectRequestItems)} delta="待提交或项目启动" tone="cyan" />
-        <MetricCard label="产品评估项" value={String(productEvaluationItems)} delta="范围 / 方案 / 资源 / 供应商" tone="violet" />
-        <MetricCard label="待组织验收" value={String(acceptance.length)} delta="业务部门待评分" tone="green" />
+        <MetricCard label="待需求评审" value={String(pendingAnalysis.length)} delta="产品经理处理" tone="orange" />
+        <MetricCard label="待方案确认" value={String(solutionConfirmItems)} delta="需求方确认" tone="violet" />
+        <MetricCard label="待项目启动" value={String(pendingDeliveryRequests.length + projectStartItems)} delta="项目经理判断资源" tone="cyan" />
+        <MetricCard label="待项目验收" value={String(acceptance.length)} delta="产品经理验收" tone="green" />
       </div>
 
       <div className="panel">
-        <FilterPanel eyebrow="FILTERS" title="产品协作筛选" summary={`需求 ${filteredDemands.length} / ${liveDemands.length} · 流程 ${filteredFlows.length} / ${flows.length}`} activeCount={activeFilterCount}>
+        <FilterPanel eyebrow="FILTERS" title="流程协作筛选" summary={`需求 ${filteredDemands.length} / ${liveDemands.length} · 流程 ${filteredFlows.length} / ${flows.length}`} activeCount={activeFilterCount}>
           <div className="filter-bar">
             <input
               aria-label="按需求、流程、负责人搜索"
@@ -223,7 +234,7 @@ export function ProductWorkflow({
             />
             <select value={filters.demandStatus} onChange={(event) => setFilters((current) => ({ ...current, demandStatus: event.target.value }))}>
               <option value={allOption}>全部需求状态</option>
-              {unique(liveDemands.map((demand) => demand.status)).map((status) => <option key={status} value={status}>{status}</option>)}
+              {demandStatusOptions.map((status) => <option key={status} value={status}>{status}</option>)}
             </select>
             <select value={filters.priority} onChange={(event) => setFilters((current) => ({ ...current, priority: event.target.value }))}>
               <option value={allOption}>全部优先级</option>
@@ -255,11 +266,11 @@ export function ProductWorkflow({
       </div>
 
       <div className="workflow-lane">
-        {["产品指派", "产品评估", "项目申请", "项目受理", "资源排期", "实施联调", "业务验收", "上线归档"].map((step, index) => (
+        {["草稿", "需求评审", "方案确认", "项目启动", "项目进行", "项目验收", "验收完成"].map((step, index) => (
           <div className="workflow-step" key={step}>
-            <span>{index + 1}</span>
+            <span>{index}</span>
             <strong>{step}</strong>
-            {index < 5 ? <ArrowRight size={16} /> : <CheckCircle2 size={16} />}
+            {index < 6 ? <ArrowRight size={16} /> : <CheckCircle2 size={16} />}
           </div>
         ))}
       </div>
@@ -337,6 +348,7 @@ export function ProductWorkflow({
           <DemandProjectFlowBoard
             flow={selectedFlow}
             canConfigure={canConfigureFlow}
+            activeRole={activeRole}
             actions={productActions}
             actionTitle="产品经理业务动作"
             logs={selectedFlowLogs}

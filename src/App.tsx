@@ -15,7 +15,7 @@ import { Resources } from "./pages/Resources";
 import { DepartmentSettings, NotificationSettings, RoleSettings, UserSettings } from "./pages/SystemSettings";
 import { Tasks } from "./pages/Tasks";
 import { ProductWorkflow } from "./pages/ProductWorkflow";
-import type { AcceptanceReview, DeliveryRequest, Demand, DemandProjectFlow, FlowActionId, FlowActionLog, FlowNode, NotificationItem, PageId, Priority, ProfileTab, Project, ProjectActionLog, ProjectStage, RoleId, RoleOption, Task, TaskPresetFilter, TaskStatus, WorkflowStageId } from "./types";
+import type { AcceptanceReview, DeliveryRequest, Demand, DemandAnalysis, DemandProjectFlow, FlowActionId, FlowActionLog, FlowNode, NotificationItem, PageId, Priority, ProfileTab, Project, ProjectActionLog, ProjectStage, ResourceAssignmentPlan, RoleId, RoleOption, Task, TaskPresetFilter, TaskStatus, WorkflowStageId } from "./types";
 
 export default function App() {
   const [activePage, setActivePage] = useState<PageId>("dashboard");
@@ -108,6 +108,31 @@ export default function App() {
     );
   }
 
+  function updateDemandAnalysis(id: string, analysis: DemandAnalysis, summary: string) {
+    setDemands((items) =>
+      items.map((demand) =>
+        demand.id === id
+          ? {
+              ...demand,
+              analysis,
+              comments: [`2026-05-27 ${role.userName} 更新需求评审：${summary}`, ...demand.comments]
+            }
+          : demand
+      )
+    );
+    createNotification({
+      title: `${id} 需求评审字段已更新`,
+      content: `${role.userName} 更新了价值评分、迭代版本、资源方案和实现决策：${summary}`,
+      type: "需求评审更新",
+      level: "blue",
+      channel: "站内信",
+      targetRoles: ["product", "requester", "businessOwner"],
+      sourceUserName: role.userName,
+      relatedType: "demand",
+      relatedId: id
+    });
+  }
+
   function submitAcceptanceReview(id: string, review: AcceptanceReview) {
     setDemands((items) =>
       items.map((demand) =>
@@ -153,7 +178,7 @@ export default function App() {
     }
   }
 
-  function createTask(projectId: string, parentTaskId: string | undefined, title: string, estimate: number, due: string, note: string) {
+  function createTask(projectId: string, parentTaskId: string | undefined, title: string, estimate: number, startDate: string, due: string, note: string) {
     const project = projects.find((item) => item.id === projectId);
     if (!project) return;
     const newTask: Task = {
@@ -166,6 +191,7 @@ export default function App() {
       status: "待开始",
       estimate,
       actual: 0,
+      startDate,
       due,
       role: "开发",
       description: note,
@@ -191,6 +217,57 @@ export default function App() {
           : flow
       )
     );
+  }
+
+  function updateFlowAssignments(flowId: string, assignments: ResourceAssignmentPlan[], summary: string) {
+    const flow = demandProjectFlows.find((item) => item.id === flowId);
+    if (!flow) return;
+    const assignedPeople = assignments.map((item) => item.person);
+    setDemandProjectFlows((items) =>
+      items.map((item) =>
+        item.id === flowId
+          ? {
+              ...item,
+              assignments,
+              nodes: item.nodes.map((node) =>
+                node.stageId === "projectExecution"
+                  ? {
+                      ...node,
+                      owner: assignedPeople.length > 0 ? assignedPeople.join(" / ") : node.owner,
+                      description: summary
+                    }
+                  : node
+              )
+            }
+          : item
+      )
+    );
+    setFlowActionLogs((items) => [
+      {
+        id: `FL-${Date.now()}-${items.length + 1}`,
+        flowId,
+        actor: role.userName,
+        roleId: activeRole,
+        actionName: "分配开发/供应商",
+        targetNodeId: "projectExecution",
+        time: nowText(),
+        summary,
+        note: summary
+      },
+      ...items
+    ]);
+    createNotification({
+      title: `${flow.title} 资源分配已更新`,
+      content: `${role.userName} 更新了开发与供应商分配：${summary}`,
+      type: "工作分配",
+      level: "blue",
+      channel: "企业微信",
+      targetRoles: ["pm", "product", "developer"],
+      targetUserNames: assignedPeople,
+      sourceUserName: role.userName,
+      relatedType: "flow",
+      relatedId: flowId
+    });
   }
 
   function assignWork(targetUserName: string, relatedType: "demand" | "project" | "task" | "resource" | "flow", relatedId: string, summary: string) {
@@ -391,6 +468,7 @@ export default function App() {
           onBack={closeDetail}
           onPriorityChange={updateDemandPriority}
           onSubmitReview={submitAcceptanceReview}
+          onUpdateAnalysis={updateDemandAnalysis}
           onApplyFlowAction={applyFlowAction}
           onAssignWork={assignWork}
         />
@@ -410,6 +488,7 @@ export default function App() {
           onBack={closeDetail}
           onApplyFlowAction={applyFlowAction}
           onAssignWork={assignWork}
+          onUpdateFlowAssignments={updateFlowAssignments}
           onUpdateProjectRecord={updateProjectRecord}
           onAdvanceProjectStage={advanceProjectStage}
           onOpenTaskFilter={openTaskFilter}
@@ -417,11 +496,12 @@ export default function App() {
       ) : null}
       {detailView ? null : (
         <>
-      {activePage === "dashboard" ? <Dashboard role={activeRole} /> : null}
+      {activePage === "dashboard" ? <Dashboard role={activeRole} projects={projects} tasks={tasks} flows={demandProjectFlows} onOpenProjectDetail={openProjectDetail} /> : null}
       {activePage === "demands" ? (
         <Demands
           demands={visibleDemands}
           canAdjustPriority={activeRole === "admin" || activeRole === "businessOwner"}
+          canCreateDemand={["admin", "requester", "businessOwner"].includes(activeRole)}
           onPriorityChange={updateDemandPriority}
           onOpenDetail={openDemandDetail}
         />
@@ -460,7 +540,7 @@ export default function App() {
       ) : null}
       {activePage === "tasks" ? <Tasks tasks={tasks} projects={projects} activeRole={activeRole} activeUser={role} presetFilter={taskPresetFilter} onStatusChange={changeTaskStatus} onAddWorklog={addWorklog} onCreateTask={createTask} /> : null}
       {activePage === "resources" ? <Resources flows={demandProjectFlows} /> : null}
-      {activePage === "reports" ? <Reports activeRole={activeRole} activeUser={role} demands={demands} tasks={tasks} flows={demandProjectFlows} /> : null}
+      {activePage === "reports" ? <Reports activeRole={activeRole} activeUser={role} demands={demands} tasks={tasks} flows={demandProjectFlows} onOpenProjectDetail={openProjectDetail} /> : null}
       {activePage === "permissions" ? <Permissions activeRole={activeRole} /> : null}
       {activePage === "integrations" ? <Integrations /> : null}
       {activePage === "userSettings" ? <UserSettings /> : null}

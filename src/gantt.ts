@@ -2,6 +2,8 @@ import type { Project, ResourceCalendarEntry, ResourcePerson, Task, Tone } from 
 
 export interface GanttBar {
   id: string;
+  targetType?: "project" | "resource";
+  targetId?: string;
   label: string;
   start: string;
   end: string;
@@ -37,7 +39,7 @@ export function buildProjectGanttGroups(projects: Project[], tasks: Task[]): Gan
   const taskByProject = groupBy(tasks, (task) => task.projectId);
   const grouped = groupBy(projects, projectMainTeam);
 
-  return ["IT部项目治理", "IT部交付实施", "业务部门验收上线"].map((title, groupIndex) => {
+  return ["IT部项目治理", "IT部项目进行", "需求方验收上线"].map((title, groupIndex) => {
     const rows = (grouped.get(title) ?? []).map((project, index) => {
       const projectTasks = taskByProject.get(project.id) ?? [];
       const range = projectDateRange(project, projectTasks, index + groupIndex);
@@ -53,6 +55,8 @@ export function buildProjectGanttGroups(projects: Project[], tasks: Task[]): Gan
         bars: [
           {
             id: `${project.id}-delivery`,
+            targetType: "project" as const,
+            targetId: project.id,
             label: `${project.stage} · ${project.progress}%`,
             start: range.start,
             end: range.end,
@@ -101,6 +105,8 @@ export function buildResourceGanttGroups(resourcePeople: ResourcePerson[], calen
       const entrySummary = entries.length > 0 ? `${entries.length} 条排期 · ${entries.reduce((sum, entry) => sum + entry.hours, 0)}h` : "暂无日历排期";
       return {
         id: `${person.name}-${allocation.project}-${allocationIndex}`,
+        targetType: "resource" as const,
+        targetId: person.name,
         label: `${shortProjectName(allocation.project)} ${load}%`,
         start: range.start,
         end: range.end,
@@ -193,14 +199,14 @@ function resourceDateRange(entries: ResourceCalendarEntry[], allocationIndex: nu
 
 function projectMainTeam(project: Project) {
   if (project.stage === "项目启动") return "IT部项目治理";
-  if (project.stage === "项目进行") return "IT部交付实施";
-  return "业务部门验收上线";
+  if (project.stage === "项目进行") return "IT部项目进行";
+  return "需求方验收上线";
 }
 
 function teamSubtitle(title: string) {
   if (title === "IT部项目治理") return "项目申请、立项、资源排期和供应商治理";
-  if (title === "IT部交付实施") return "内部开发、联调、技术问题处理";
-  return "业务验收、上线确认和归档配合";
+  if (title === "IT部项目进行") return "内部开发、联调、技术问题处理";
+  return "需求方评分、上线确认和归档配合";
 }
 
 function toneForProjectStage(stage: string): Tone {

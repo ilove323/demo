@@ -49,8 +49,8 @@ export function Projects({
     owner: allOption,
     supplierManager: allOption
   });
-  const visibleProjects = useMemo(() => getVisibleProjects(projects, activeRole, activeUser), [activeRole, activeUser, projects]);
-  const ownerOptions = useMemo(() => unique(visibleProjects.map((project) => project.owner)), [visibleProjects]);
+  const visibleProjects = useMemo(() => getVisibleProjects(projects, tasks, activeRole, activeUser), [activeRole, activeUser, projects, tasks]);
+  const productOwnerOptions = useMemo(() => unique(visibleProjects.map((project) => productOwnerForProject(project, deliveryRequests))), [deliveryRequests, visibleProjects]);
   const supplierManagerOptions = useMemo(() => unique(visibleProjects.map((project) => project.supplierManager)), [visibleProjects]);
   const taskById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
   const projectById = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
@@ -65,7 +65,7 @@ export function Projects({
             project.id,
             project.name,
             project.demandId,
-            project.owner,
+            productOwnerForProject(project, deliveryRequests),
             project.supplierManager,
             project.projectType,
             project.implementation,
@@ -89,11 +89,11 @@ export function Projects({
           matchesSelect(project.implementation, filters.implementation) &&
           matchesSelect(project.stage, filters.stage) &&
           matchesSelect(project.risk, filters.risk) &&
-          matchesSelect(project.owner, filters.owner) &&
+          matchesSelect(productOwnerForProject(project, deliveryRequests), filters.owner) &&
           matchesSelect(project.supplierManager, filters.supplierManager)
         );
       }),
-    [filters, taskById, visibleProjects]
+    [deliveryRequests, filters, taskById, visibleProjects]
   );
   const projectGanttGroups = useMemo(() => buildProjectGanttGroups(filteredProjects, tasks), [filteredProjects, tasks]);
   const visibleDeliveryRequests = useMemo(() => {
@@ -166,8 +166,8 @@ export function Projects({
         <FilterPanel title="项目筛选" summary={`显示 ${filteredProjects.length} / ${visibleProjects.length} 个项目`} activeCount={activeFilterCount}>
           <div className="filter-bar">
             <input
-              aria-label="按项目、需求、负责人搜索"
-              placeholder="搜索项目 / 需求 / 负责人 / 供应商"
+              aria-label="按项目、需求、产品经理搜索"
+              placeholder="搜索项目 / 需求 / 产品经理 / 供应商"
               value={filters.keyword}
               onChange={(event) => setFilters((current) => ({ ...current, keyword: event.target.value }))}
             />
@@ -190,8 +190,8 @@ export function Projects({
               {unique(visibleProjects.map((project) => project.risk)).map((risk) => <option key={risk} value={risk}>{risk}</option>)}
             </select>
             <select value={filters.owner} onChange={(event) => setFilters((current) => ({ ...current, owner: event.target.value }))}>
-              <option value={allOption}>全部项目经理</option>
-              {ownerOptions.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
+              <option value={allOption}>全部产品经理</option>
+              {productOwnerOptions.map((owner) => <option key={owner} value={owner}>{owner}</option>)}
             </select>
             <select value={filters.supplierManager} onChange={(event) => setFilters((current) => ({ ...current, supplierManager: event.target.value }))}>
               <option value={allOption}>全部供应商负责人</option>
@@ -204,7 +204,7 @@ export function Projects({
           <GanttTimeline
             groups={projectGanttGroups}
             onBarClick={(bar) => {
-              const project = filteredProjects.find((item) => bar.id.startsWith(item.id));
+              const project = filteredProjects.find((item) => item.id === bar.targetId || bar.id.startsWith(item.id));
               if (project) onOpenDetail(project.id);
             }}
           />
@@ -213,7 +213,7 @@ export function Projects({
             <thead>
               <tr>
                 <th>项目</th>
-                <th>负责人</th>
+                <th>产品经理</th>
                 <th>项目类型</th>
                 <th>协作模式</th>
                 <th>阶段</th>
@@ -230,7 +230,7 @@ export function Projects({
                     <strong>{project.name}</strong>
                     <div className="muted-text">{project.id} · 关联 {project.demandId}</div>
                   </td>
-                  <td>{project.owner}</td>
+                  <td>{productOwnerForProject(project, deliveryRequests)}</td>
                   <td><StatusTag tone={toneForProjectType(project.projectType)}>{project.projectType}</StatusTag></td>
                   <td><StatusTag tone={toneForImplementation(project.implementation)}>{project.implementation}</StatusTag></td>
                   <td><StatusTag tone={toneForStatus(project.stage)}>{project.stage}</StatusTag></td>
@@ -262,7 +262,7 @@ export function Projects({
                   <StatusTag tone={toneForStatus(project.stage)}>{project.stage}</StatusTag>
                 </div>
                 <div className="compact-grid">
-                  <span>负责人：{project.owner}</span>
+                  <span>产品经理：{productOwnerForProject(project, deliveryRequests)}</span>
                   <span>预算：{formatMoney(project.usedBudget)} / {formatMoney(project.budget)}</span>
                   <span>下一步：{nextProjectAction(project)}</span>
                 </div>
@@ -317,7 +317,7 @@ export function Projects({
   );
 }
 
-function getVisibleProjects(projects: Project[], activeRole: RoleId, activeUser: RoleOption) {
+function getVisibleProjects(projects: Project[], tasks: Task[], activeRole: RoleId, activeUser: RoleOption) {
   if (activeRole === "pm") {
     return projects.filter((project) => project.owner === activeUser.userName || project.supplierManager === activeUser.userName);
   }
@@ -325,7 +325,17 @@ function getVisibleProjects(projects: Project[], activeRole: RoleId, activeUser:
     const ownedDemandIds = new Set(demands.filter((demand) => demand.handler.includes(activeUser.userName)).map((demand) => demand.id));
     return projects.filter((project) => ownedDemandIds.has(project.demandId));
   }
+  if (activeRole === "developer") {
+    const ownedProjectIds = new Set(tasks.filter((task) => task.owner === activeUser.userName).map((task) => task.projectId));
+    return projects.filter((project) => ownedProjectIds.has(project.id));
+  }
   return projects;
+}
+
+function productOwnerForProject(project: Project, deliveryRequests: DeliveryRequest[]) {
+  const request = deliveryRequests.find((item) => item.projectId === project.id || item.demandId === project.demandId);
+  const demand = demands.find((item) => item.id === project.demandId);
+  return request?.productOwner ?? demand?.handler.replace(" / 产品", "") ?? "未分配";
 }
 
 export function getProjectManagerActions(activeRole: RoleId, flow: DemandProjectFlow, project: Project, projectTasks: Task[] = []): FlowBoardAction[] {
@@ -404,8 +414,8 @@ function AiScoreBadge({ project, compact = false }: { project?: Project; compact
   if (!project) {
     return (
       <div className="ai-score-inline empty">
-        <strong>待生成</strong>
-        <span>立项评分等待项目申请材料补齐</span>
+        <strong>生成中</strong>
+        <span>AI 正在基于项目申请材料生成立项评分</span>
       </div>
     );
   }

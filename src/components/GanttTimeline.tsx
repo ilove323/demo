@@ -81,9 +81,11 @@ export function GanttTimeline({
                           key={bar.id}
                           style={barStyle(bar, start, totalDays, compact)}
                           type="button"
-                          onClick={() => setSelectedBar(bar)}
-                          onDoubleClick={() => onBarClick?.(bar)}
-                          aria-label={`${bar.label}，${bar.meta ?? ""}`}
+                          onClick={() => {
+                            setSelectedBar(bar);
+                            onBarClick?.(bar);
+                          }}
+                          aria-label={`${bar.label}，${bar.meta ?? ""}，点击打开详情`}
                         >
                           <span className="gantt-bar-content">
                             <b>{bar.label}</b>

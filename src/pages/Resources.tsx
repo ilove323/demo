@@ -3,13 +3,14 @@ import { projectInvestmentBreakdowns, resourceCalendars, resourcePeople, resourc
 import { projects } from "../data";
 import { GanttTimeline } from "../components/GanttTimeline";
 import { buildResourceGanttGroups, buildResourceRiskAlerts } from "../gantt";
-import type { DemandProjectFlow, ResourcePerson } from "../types";
+import type { DemandProjectFlow, ResourceCalendarEntry, ResourcePerson } from "../types";
 import { ScheduleCalendar } from "../components/ScheduleCalendar";
 import { MetricCard, Modal, ProgressBar, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
 
 export function Resources({ flows }: { flows: DemandProjectFlow[] }) {
   const [selectedPerson, setSelectedPerson] = useState<ResourcePerson | null>(null);
   const [calendarPerson, setCalendarPerson] = useState<ResourcePerson | null>(null);
+  const [calendarEntry, setCalendarEntry] = useState<ResourceCalendarEntry | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "card" | "gantt">("card");
   const totalAssigned = resourcePeople.reduce((sum, person) => sum + person.assigned, 0);
   const totalCapacity = resourcePeople.reduce((sum, person) => sum + person.capacity, 0);
@@ -43,17 +44,32 @@ export function Resources({ flows }: { flows: DemandProjectFlow[] }) {
         />
         {viewMode === "gantt" ? (
           <div className="resource-gantt-layout">
-            <GanttTimeline groups={resourceGanttGroups} />
+            <GanttTimeline
+              groups={resourceGanttGroups}
+              onBarClick={(bar) => {
+                const person = resourcePeople.find((item) => item.name === bar.targetId);
+                if (person) setSelectedPerson(person);
+              }}
+            />
             <aside className="resource-risk-panel">
               <SectionHeader eyebrow="RESOURCE RISK" title="资源风险提示" />
               {resourceRiskAlerts.map((alert) => (
-                <article className={`risk-alert tone-${alert.tone}`} key={alert.id}>
+                <button
+                  className={`risk-alert tone-${alert.tone}`}
+                  key={alert.id}
+                  onClick={() => {
+                    const person = resourcePeople.find((item) => item.name === alert.id);
+                    if (person) setCalendarPerson(person);
+                  }}
+                  type="button"
+                >
                   <div>
                     <strong>{alert.title}</strong>
                     <StatusTag tone={alert.tone}>{alert.status}</StatusTag>
                   </div>
                   <p>{alert.body}</p>
-                </article>
+                  <span className="risk-alert-action">查看排期日历</span>
+                </button>
               ))}
             </aside>
           </div>
@@ -132,7 +148,7 @@ export function Resources({ flows }: { flows: DemandProjectFlow[] }) {
         <div className="panel">
           <SectionHeader eyebrow="FLOW RESOURCE" title="转项目资源安排" />
           <table className="data-table">
-            <thead><tr><th>流程</th><th>申请内容</th><th>项目经理安排</th><th>负载/冲突</th></tr></thead>
+            <thead><tr><th>流程</th><th>申请内容</th><th>资源指派</th><th>负载/冲突</th></tr></thead>
             <tbody>
               {flows.map((flow) => (
                 <tr key={flow.id}>
@@ -206,7 +222,20 @@ export function Resources({ flows }: { flows: DemandProjectFlow[] }) {
             title="人员排期日历"
             subtitle={`${calendarPerson.name} · 上行显示 task，下行显示所属项目`}
             entries={resourceCalendars.filter((entry) => entry.person === calendarPerson.name)}
+            onEntryClick={setCalendarEntry}
           />
+        ) : null}
+      </Modal>
+      <Modal title={calendarEntry?.task ?? ""} open={Boolean(calendarEntry)} onClose={() => setCalendarEntry(null)}>
+        {calendarEntry ? (
+          <div className="detail-list">
+            <div><span>人员</span><strong>{calendarEntry.person}</strong></div>
+            <div><span>日期</span><strong>{calendarEntry.date}</strong></div>
+            <div><span>时段</span><strong>{calendarEntry.timeSlot} · {calendarEntry.hours}h</strong></div>
+            <div><span>任务</span><strong>{calendarEntry.taskId} · {calendarEntry.task}</strong></div>
+            <div><span>项目</span><strong>{calendarEntry.projectId} · {calendarEntry.project}</strong></div>
+            <div><span>状态</span><strong>{calendarEntry.status}</strong></div>
+          </div>
         ) : null}
       </Modal>
     </section>
