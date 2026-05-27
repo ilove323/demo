@@ -325,23 +325,25 @@ function ExecutiveDashboard({
             <strong>人力投入：部门 × 本月周负荷热力</strong>
             <span>峰值负荷</span>
           </div>
-          <div className="executive-workload-weeks">
-            <span />
-            {["W1", "W2", "W3", "W4", "W5"].map((week) => <span key={week}>{week}</span>)}
-            <span />
-          </div>
-          <div className="executive-workload">
-            {resourceRows.map((row) => (
-              <div className="executive-workload-row" key={row.name}>
-                <span>{row.name}</span>
-                <div>
-                  {row.weeks.map((value, index) => (
-                    <i className={loadClass(value)} style={{ height: `${Math.max(16, value)}%` }} key={`${row.name}-${index}`} title={`${value}%`} />
-                  ))}
+          <div className="executive-workload-scroll">
+            <div className="executive-workload-weeks">
+              <span />
+              {["W1", "W2", "W3", "W4", "W5"].map((week) => <span key={week}>{week}</span>)}
+              <span />
+            </div>
+            <div className="executive-workload">
+              {resourceRows.map((row) => (
+                <div className="executive-workload-row" key={row.name}>
+                  <span>{row.name}</span>
+                  <div>
+                    {row.weeks.map((value, index) => (
+                      <i className={loadClass(value)} style={{ height: `${Math.max(16, value)}%` }} key={`${row.name}-${index}`} title={`${value}%`} />
+                    ))}
+                  </div>
+                  <strong>{Math.max(...row.weeks)}%</strong>
                 </div>
-                <strong>{Math.max(...row.weeks)}%</strong>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
           <div className="executive-workload-head executive-budget-head">
             <strong>资金投入：项目级预算执行与预测偏差</strong>
@@ -360,27 +362,29 @@ function ExecutiveDashboard({
 
         <section className="executive-panel executive-gantt-panel">
           <ExecutivePanelHead title="项目交付路线图" subtitle="按项目查看本月交付窗口，点击进入项目详情" />
-          <div className="executive-gantt-scale">
-            <span />
-            <span>5/1</span>
-            <span>5/8</span>
-            <span>5/15</span>
-            <span>5/22</span>
-            <span>5/29</span>
-          </div>
-          <div className="executive-gantt-list">
-            {ganttRows.map((project) => (
-              <button className="executive-gantt-row" type="button" key={project.name} onClick={() => project.id && onOpenProjectDetail(project.id)}>
-                <span>
-                  <strong>{project.name}</strong>
-                  <small>{project.projectType} · {project.implementation}</small>
-                </span>
-                <i>
-                  <b className={`risk-${riskTone(project.risk)}`} style={{ left: `${project.left}%`, width: `${project.width}%` }}>{project.stage}</b>
-                </i>
-                <em>{project.progress}%</em>
-              </button>
-            ))}
+          <div className="executive-gantt-scroll">
+            <div className="executive-gantt-scale">
+              <span />
+              <span>5/1</span>
+              <span>5/8</span>
+              <span>5/15</span>
+              <span>5/22</span>
+              <span>5/29</span>
+            </div>
+            <div className="executive-gantt-list">
+              {ganttRows.map((project) => (
+                <button className="executive-gantt-row" type="button" key={project.name} onClick={() => project.id && onOpenProjectDetail(project.id)}>
+                  <span>
+                    <strong>{project.name}</strong>
+                    <small>{project.projectType} · {project.implementation}</small>
+                  </span>
+                  <i>
+                    <b className={`risk-${riskTone(project.risk)}`} style={{ left: `${project.left}%`, width: `${project.width}%` }}>{project.stage}</b>
+                  </i>
+                  <em>{project.progress}%</em>
+                </button>
+              ))}
+            </div>
           </div>
         </section>
 

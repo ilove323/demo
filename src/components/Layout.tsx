@@ -118,10 +118,12 @@ export function AppLayout({
 
       <section className={isExecutiveDashboard ? "workspace executive-workspace" : "workspace"}>
         <header className="topbar">
-          <div className="search-box">
-            <Search size={17} />
-            <input placeholder="搜索需求、项目、负责人" />
-          </div>
+          {isExecutiveDashboard ? <div /> : (
+            <div className="search-box">
+              <Search size={17} />
+              <input placeholder="搜索需求、项目、负责人" />
+            </div>
+          )}
           <div className="topbar-actions">
             <div className="theme-switcher" aria-label="主题切换">
               <button
