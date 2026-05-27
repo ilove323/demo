@@ -160,7 +160,7 @@ export function ProjectDetail({
         <article className="summary-tile">
           <span>预算使用</span>
           <strong>{formatMoney(project.usedBudget)}</strong>
-          <small>总预算 {formatMoney(project.budget)}</small>
+          <small>总预算 {formatMoney(project.budget)} · 来源：需求评审</small>
         </article>
         <article className="summary-tile">
           <span>内部投入</span>
@@ -218,6 +218,8 @@ export function ProjectDetail({
               <div><span>项目经理</span><strong>{project.owner}</strong></div>
               <div><span>供应商管理</span><strong>{project.supplierManager}</strong></div>
               <div><span>项目申请</span><strong>{deliveryRequest ? `${deliveryRequest.id} · ${deliveryRequest.status}` : "暂无申请记录"}</strong></div>
+              <div><span>预算来源</span><strong>{demand ? `产品经理需求评审预算：${formatMoney(demand.analysis.budgetEstimate)}` : "来源需求评审预算测算"}</strong></div>
+              <div><span>预算依据</span><strong>{demand?.analysis.budgetBasis ?? "暂无预算测算依据"}</strong></div>
               <div><span>风险原因</span><strong>{project.riskReason}</strong></div>
             </div>
           </div>
@@ -314,6 +316,12 @@ export function ProjectDetail({
 
           <div className="panel">
             <SectionHeader title="资源与预算" />
+            {demand ? (
+              <div className="panel-soft-block">
+                <strong>预算来自阶段1产品经理需求评审：{formatMoney(demand.analysis.budgetEstimate)}</strong>
+                <p>{demand.analysis.budgetBasis}</p>
+              </div>
+            ) : null}
             <ul className="pill-list">{project.resources.map((item) => <li key={item}>{item}</li>)}</ul>
             <div className="contribution-list compact">
               {project.contributions.map((item) => (

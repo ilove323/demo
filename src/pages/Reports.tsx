@@ -1119,7 +1119,7 @@ function buildInsights(
   if (domain === "product") {
     return [
       { type: "价值", tone: "violet" as Tone, title: `平均价值 ${Math.round(average(visibleDemands.map((demand) => demand.analysis.valueScore)))}`, body: "可结合实现方式和资源申请状态决定下一批迭代优先级。" },
-      { type: "流程", tone: "blue" as Tone, title: `${visibleProjects.length} 个需求已转项目`, body: "资源申请、方案确认和验收节点应在流程工作台继续跟进。" },
+      { type: "流程", tone: "blue" as Tone, title: `${visibleProjects.length} 个需求已转项目`, body: "资源申请、方案确认和验收节点应在需求详情或项目详情继续处理。" },
       { type: "待办", tone: "orange" as Tone, title: pendingDemand?.name ?? "暂无关键待办", body: pendingDemand ? `${pendingDemand.status} · ${pendingDemand.objective}` : "暂无项目验收或需求评审需求。" }
     ];
   }

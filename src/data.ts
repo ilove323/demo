@@ -29,7 +29,6 @@ import type {
   ProjectDependency,
   ProjectInvestmentBreakdown,
   ProjectRule,
-  ProductWorkflowItem,
   ReportDatum,
   ResourceCalendarEntry,
   ResourcePerson,
@@ -139,7 +138,6 @@ export const roles: RoleOption[] = [
 export const navItems: NavItem[] = [
   { id: "dashboard", label: "工作台", icon: Gauge },
   { id: "demands", label: "需求管理", icon: ClipboardList },
-  { id: "workflow", label: "流程工作台", icon: ClipboardList },
   { id: "projects", label: "项目管理", icon: ServerCog },
   { id: "tasks", label: "任务与工时", icon: KanbanSquare },
   { id: "resources", label: "资源与预算", icon: UsersRound },
@@ -289,6 +287,8 @@ export const demands: Demand[] = [
       valueScore: 76,
       implementationReason: "草稿阶段尚未进入产品评审，当前实现方式只是需求方预估。",
       resourcePlan: "待产品经理评审后估算。",
+      budgetEstimate: 0,
+      budgetBasis: "草稿阶段未进入产品经理评审，暂无预算测算。",
       iteration: "样品协同 V0.1"
     },
     priorityHistory: ["提交时 P2"],
@@ -316,6 +316,8 @@ export const demands: Demand[] = [
       valueScore: 94,
       implementationReason: "SAP 核心模块升级由外部 SAP 实施顾问、IT部项目经理、IT部产品与开发、业务部门共同合作实现。",
       resourcePlan: "SAP 顾问 4 人、ABAP 开发 2 人、内部接口开发 2 人、测试 2 人，共 132 人天。",
+      budgetEstimate: 1880000,
+      budgetBasis: "按 SAP 顾问合同、ABAP/接口开发人天、测试验证和数据迁移窗口测算。",
       iteration: "SAP 核心平台 V2026.1"
     },
     priorityHistory: ["提交时 P1", "业务部门负责人调整为 P0：财务月结和供应链结算强依赖"],
@@ -343,6 +345,8 @@ export const demands: Demand[] = [
       valueScore: 88,
       implementationReason: "CRM 产品由外部供应商定制，内部 IT 负责权限、主数据和接口校验，业务方负责合规规则确认。",
       resourcePlan: "产品经理 1 人、CRM 顾问 2 人、移动端开发 1 人、验证测试 1 人。",
+      budgetEstimate: 720000,
+      budgetBasis: "按 CRM 供应商定制报价、移动端留痕改造、接口校验和验证测试人天测算。",
       iteration: "CRM 合规 V3.2"
     },
     priorityHistory: ["提交时 P2", "业务部门负责人调整为 P1：合规审计前必须上线"],
@@ -370,6 +374,8 @@ export const demands: Demand[] = [
       valueScore: 87,
       implementationReason: "产品经理建议内部实现，复用现有质量数据接口和权限模型。",
       resourcePlan: "产品经理 1 人、全栈开发 1 人、测试 1 人，预计 28 人天。",
+      budgetEstimate: 180000,
+      budgetBasis: "内部实现按 28 人天、复用质量系统接口、少量测试验证环境成本测算。",
       iteration: "质量协同 V1.0"
     },
     priorityHistory: ["提交时 P2", "业务部门负责人调整为 P1：季度质量复盘依赖"],
@@ -397,6 +403,8 @@ export const demands: Demand[] = [
       valueScore: 90,
       implementationReason: "核心功能内部实现，同时引入 GxP 验证咨询支持验证策略和文档包。",
       resourcePlan: "全栈开发 1 人、验证工程师 1 人、测试 1 人，共 72 人天。",
+      budgetEstimate: 620000,
+      budgetBasis: "按内部开发人天、验证咨询服务、电子签名审计追踪配置和验证包复核测算。",
       iteration: "质量数字化 V1.5"
     },
     priorityHistory: ["提交时 P1", "保持 P1：年度 GMP 审计前验收"],
@@ -424,6 +432,8 @@ export const demands: Demand[] = [
       valueScore: 89,
       implementationReason: "该需求涉及内部指标口径、数据权限和审计日志，IT部掌握现有平台能力，因此采用纯内部实现。",
       resourcePlan: "产品经理 1 人、全栈开发 1 人、前端开发 1 人、接口开发 1 人，共 58 人天。",
+      budgetEstimate: 280000,
+      budgetBasis: "内部实现按 58 人天、报表底座复用、权限模型和审计日志开发测算。",
       iteration: "业务数据门户 V1.0"
     },
     priorityHistory: ["提交时 P2", "业务部门负责人调整为 P1：月度经营复盘依赖"],
@@ -451,6 +461,8 @@ export const demands: Demand[] = [
       valueScore: 86,
       implementationReason: "LIMS 供应商负责产品升级，IT部负责供应商交付治理，IT部负责接口、安全和验证支持，需求方负责验收评分。",
       resourcePlan: "产品经理 1 人、供应商实施 3 人、内部验证测试 1 人。",
+      budgetEstimate: 860000,
+      budgetBasis: "按 LIMS 供应商升级包、仪器接口适配、历史数据迁移和内部验证测试测算。",
       iteration: "实验室信息化 V2.0"
     },
     acceptanceReview: {
@@ -485,6 +497,8 @@ export const demands: Demand[] = [
       valueScore: 91,
       implementationReason: "算力平台由 IT部项目经理统筹，IT部负责平台联调和技术验收，硬件与机房实施由外部供应商配合，需求方参与验收评分。",
       resourcePlan: "基础架构 2 人、平台开发 1 人、网络工程师 1 人、供应商实施 2 人，共 98 人天。",
+      budgetEstimate: 3260000,
+      budgetBasis: "按 GPU 设备、存储网络、机房电力扩容、供应商实施和平台联调人天测算。",
       iteration: "算法算力平台 V1.0"
     },
     priorityHistory: ["提交时 P2", "保持 P2：GPU 到货前不升优先级"],
@@ -512,6 +526,8 @@ export const demands: Demand[] = [
       valueScore: 72,
       implementationReason: "该项目为纯外部供应商实施，IT部项目经理管理合同、交付、风险和验收，业务部门确认使用效果。",
       resourcePlan: "外部集成商 3 人现场实施，IT部项目经理治理 8 人天，业务部门验收 6 人天。",
+      budgetEstimate: 450000,
+      budgetBasis: "按音视频设备采购、弱电布线、现场调试、供应商培训和验收支持测算。",
       iteration: "培训中心硬件更新 V1.0"
     },
     priorityHistory: ["提交时 P3", "保持 P3：可与季度培训计划错峰实施"],
@@ -1862,57 +1878,6 @@ export const roleNotificationSubscriptions: RoleNotificationSubscription[] = [
   }
 ];
 
-export const productWorkflowItems: ProductWorkflowItem[] = [
-  {
-    id: "WF-01",
-    title: "阶段1需求评审：CRM 合规拜访改造",
-    demandId: "REQ-2026-038",
-    owner: "陈彦",
-    stage: "需求评审",
-    status: "进行中",
-    description: "补齐业务目标、合规约束、审计留痕和移动端使用场景。",
-    decision: "已确认拜访计划、签到定位、资料推送和医学审批为首期范围。",
-    nextAction: "产品经理发起方案确认或打回需求",
-    artifacts: ["需求分析说明", "AI 价值评分 88", "合规留痕清单"]
-  },
-  {
-    id: "WF-02",
-    title: "阶段2方案确认：质量偏差 CAPA 跟踪看板",
-    demandId: "REQ-STAGE-2",
-    owner: "陈彦",
-    stage: "方案确认",
-    status: "待需求方确认",
-    description: "产品经理已完成方案、范围和资源投入测算，等待需求方确认。",
-    decision: "建议采用内部实现，先做只读看板、到期提醒和关闭状态追踪。",
-    nextAction: "需求方发起项目申请或放弃需求",
-    artifacts: ["方案说明", "资源测算 28 人天", "验收边界"]
-  },
-  {
-    id: "WF-03",
-    title: "阶段4项目进行：SAP 财务供应链升级",
-    demandId: "REQ-2026-041",
-    owner: "陈彦",
-    stage: "项目进行",
-    status: "开发中",
-    description: "项目经理已启动项目，开发正在拆分任务、汇报进度和登记工时。",
-    decision: "优先推进主数据迁移和外围接口联调。",
-    nextAction: "开发完成任务后由项目经理提交项目验收",
-    artifacts: ["资源申请单 RS-204", "排期草案", "任务拆分清单"]
-  },
-  {
-    id: "WF-04",
-    title: "阶段5项目验收：GxP 电子文档与验证平台",
-    demandId: "REQ-2026-033",
-    owner: "陈彦",
-    stage: "项目验收",
-    status: "待产品验收",
-    description: "项目经理已提交项目验收，产品经理需要判断验收完成或退回项目进行。",
-    decision: "验证环境已准备，缺陷清单只剩低优先级问题。",
-    nextAction: "产品经理完成验收或退回整改",
-    artifacts: ["验收邀请", "验证测试通过报告", "上线检查表"]
-  }
-];
-
 export const projectRules: ProjectRule[] = [
   { stage: "项目启动", deliverable: "项目申请、方案确认、资源测算、验收标准", owner: "项目经理", acceptance: "项目经理确认启动或退回方案确认" },
   { stage: "项目进行", deliverable: "任务拆解、工时记录、接口清单、供应商交付记录", owner: "项目经理 / 开发", acceptance: "关键任务按周更新状态" },
@@ -1947,7 +1912,7 @@ export const botMessages: BotMessage[] = [
 export const roleAccessPreviews: RoleAccessPreview[] = [
   {
     roleId: "admin",
-    visibleModules: ["工作台", "需求管理", "流程工作台", "项目管理", "任务与工时", "资源与预算", "绩效与报表", "系统设置"],
+    visibleModules: ["工作台", "需求管理", "项目管理", "任务与工时", "资源与预算", "绩效与报表", "系统设置"],
     actions: ["查看全量数据", "维护权限", "维护用户", "维护角色", "维护部门", "配置集成"],
     dataScope: "全量组织、角色、菜单、集成配置，以及全部 IT 项目数据"
   },
@@ -1965,7 +1930,7 @@ export const roleAccessPreviews: RoleAccessPreview[] = [
   },
   {
     roleId: "product",
-    visibleModules: ["工作台", "需求管理", "流程工作台", "项目管理", "绩效与报表"],
+    visibleModules: ["工作台", "需求管理", "项目管理", "绩效与报表"],
     actions: ["需求评审", "打回需求", "发起方案确认", "项目验收", "退回项目进行"],
     dataScope: "本人承接或参与分析的需求、关联项目和产品绩效"
   },

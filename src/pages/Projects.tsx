@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
-import { demands } from "../data";
 import { FilterPanel } from "../components/FilterPanel";
 import { GanttTimeline } from "../components/GanttTimeline";
 import { buildProjectGanttGroups } from "../gantt";
-import type { DeliveryRequest, DemandProjectFlow, FlowActionId, FlowActionLog, FlowBoardAction, Project, ProjectActionLog, ProjectStage, RoleId, RoleOption, Task, TaskPresetFilter, Tone } from "../types";
+import type { DeliveryRequest, Demand, DemandProjectFlow, FlowActionId, FlowActionLog, FlowBoardAction, Project, ProjectActionLog, ProjectStage, RoleId, RoleOption, Task, TaskPresetFilter, Tone } from "../types";
 import { ProgressBar, SectionHeader, StatusTag, toneForStatus } from "../components/ui";
 
 const allOption = "全部";
 
 export function Projects({
+  demands,
   projects,
   tasks,
   flows,
@@ -24,6 +24,7 @@ export function Projects({
   onOpenTaskFilter,
   onOpenDetail
 }: {
+  demands: Demand[];
   projects: Project[];
   tasks: Task[];
   flows: DemandProjectFlow[];
@@ -49,8 +50,8 @@ export function Projects({
     owner: allOption,
     supplierManager: allOption
   });
-  const visibleProjects = useMemo(() => getVisibleProjects(projects, tasks, activeRole, activeUser), [activeRole, activeUser, projects, tasks]);
-  const productOwnerOptions = useMemo(() => unique(visibleProjects.map((project) => productOwnerForProject(project, deliveryRequests))), [deliveryRequests, visibleProjects]);
+  const visibleProjects = useMemo(() => getVisibleProjects(projects, tasks, demands, activeRole, activeUser), [activeRole, activeUser, demands, projects, tasks]);
+  const productOwnerOptions = useMemo(() => unique(visibleProjects.map((project) => productOwnerForProject(project, deliveryRequests, demands))), [deliveryRequests, demands, visibleProjects]);
   const supplierManagerOptions = useMemo(() => unique(visibleProjects.map((project) => project.supplierManager)), [visibleProjects]);
   const taskById = useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
   const projectById = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
@@ -65,7 +66,7 @@ export function Projects({
             project.id,
             project.name,
             project.demandId,
-            productOwnerForProject(project, deliveryRequests),
+            productOwnerForProject(project, deliveryRequests, demands),
             project.supplierManager,
             project.projectType,
             project.implementation,
@@ -89,11 +90,11 @@ export function Projects({
           matchesSelect(project.implementation, filters.implementation) &&
           matchesSelect(project.stage, filters.stage) &&
           matchesSelect(project.risk, filters.risk) &&
-          matchesSelect(productOwnerForProject(project, deliveryRequests), filters.owner) &&
+          matchesSelect(productOwnerForProject(project, deliveryRequests, demands), filters.owner) &&
           matchesSelect(project.supplierManager, filters.supplierManager)
         );
       }),
-    [deliveryRequests, filters, taskById, visibleProjects]
+    [deliveryRequests, demands, filters, taskById, visibleProjects]
   );
   const projectGanttGroups = useMemo(() => buildProjectGanttGroups(filteredProjects, tasks), [filteredProjects, tasks]);
   const visibleDeliveryRequests = useMemo(() => {
@@ -230,7 +231,7 @@ export function Projects({
                     <strong>{project.name}</strong>
                     <div className="muted-text">{project.id} · 关联 {project.demandId}</div>
                   </td>
-                  <td>{productOwnerForProject(project, deliveryRequests)}</td>
+                  <td>{productOwnerForProject(project, deliveryRequests, demands)}</td>
                   <td><StatusTag tone={toneForProjectType(project.projectType)}>{project.projectType}</StatusTag></td>
                   <td><StatusTag tone={toneForImplementation(project.implementation)}>{project.implementation}</StatusTag></td>
                   <td><StatusTag tone={toneForStatus(project.stage)}>{project.stage}</StatusTag></td>
@@ -241,7 +242,7 @@ export function Projects({
                       <span>{project.progress}%</span>
                     </div>
                   </td>
-                  <td>{formatMoney(project.usedBudget)} / {formatMoney(project.budget)}</td>
+                  <td>{formatMoney(project.usedBudget)} / {formatMoney(project.budget)}<div className="muted-text">来源：需求评审预算</div></td>
                   <td><StatusTag tone={toneForStatus(project.risk)}>{project.risk}</StatusTag></td>
                 </tr>
               ))}
@@ -262,8 +263,8 @@ export function Projects({
                   <StatusTag tone={toneForStatus(project.stage)}>{project.stage}</StatusTag>
                 </div>
                 <div className="compact-grid">
-                  <span>产品经理：{productOwnerForProject(project, deliveryRequests)}</span>
-                  <span>预算：{formatMoney(project.usedBudget)} / {formatMoney(project.budget)}</span>
+                  <span>产品经理：{productOwnerForProject(project, deliveryRequests, demands)}</span>
+                  <span>预算：{formatMoney(project.usedBudget)} / {formatMoney(project.budget)}（需求评审）</span>
                   <span>下一步：{nextProjectAction(project)}</span>
                 </div>
                 <AiScoreBadge project={project} />
@@ -317,7 +318,7 @@ export function Projects({
   );
 }
 
-function getVisibleProjects(projects: Project[], tasks: Task[], activeRole: RoleId, activeUser: RoleOption) {
+function getVisibleProjects(projects: Project[], tasks: Task[], demands: Demand[], activeRole: RoleId, activeUser: RoleOption) {
   if (activeRole === "pm") {
     return projects.filter((project) => project.owner === activeUser.userName || project.supplierManager === activeUser.userName);
   }
@@ -332,7 +333,7 @@ function getVisibleProjects(projects: Project[], tasks: Task[], activeRole: Role
   return projects;
 }
 
-function productOwnerForProject(project: Project, deliveryRequests: DeliveryRequest[]) {
+function productOwnerForProject(project: Project, deliveryRequests: DeliveryRequest[], demands: Demand[]) {
   const request = deliveryRequests.find((item) => item.projectId === project.id || item.demandId === project.demandId);
   const demand = demands.find((item) => item.id === project.demandId);
   return request?.productOwner ?? demand?.handler.replace(" / 产品", "") ?? "未分配";

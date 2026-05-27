@@ -14,7 +14,6 @@ import { Reports } from "./pages/Reports";
 import { Resources } from "./pages/Resources";
 import { DepartmentSettings, NotificationSettings, RoleSettings, UserSettings } from "./pages/SystemSettings";
 import { Tasks } from "./pages/Tasks";
-import { ProductWorkflow } from "./pages/ProductWorkflow";
 import type { AcceptanceReview, DeliveryRequest, Demand, DemandAnalysis, DemandProjectFlow, FlowActionId, FlowActionLog, FlowNode, NotificationItem, PageId, Priority, ProfileTab, Project, ProjectActionLog, ProjectStage, ResourceAssignmentPlan, RoleId, RoleOption, Task, TaskPresetFilter, TaskStatus, WorkflowStageId } from "./types";
 
 export default function App() {
@@ -120,9 +119,21 @@ export default function App() {
           : demand
       )
     );
+    if (analysis.budgetEstimate > 0) {
+      setProjects((items) =>
+        items.map((project) =>
+          project.demandId === id
+            ? {
+                ...project,
+                budget: analysis.budgetEstimate
+              }
+            : project
+        )
+      );
+    }
     createNotification({
       title: `${id} 需求评审字段已更新`,
-      content: `${role.userName} 更新了价值评分、迭代版本、资源方案和实现决策：${summary}`,
+      content: `${role.userName} 更新了价值评分、迭代版本、资源方案、预算测算和实现决策：${summary}`,
       type: "需求评审更新",
       level: "blue",
       channel: "站内信",
@@ -506,22 +517,9 @@ export default function App() {
           onOpenDetail={openDemandDetail}
         />
       ) : null}
-      {activePage === "workflow" ? (
-        <ProductWorkflow
-          demands={demands}
-          flows={demandProjectFlows}
-          deliveryRequests={deliveryRequests}
-          activeRole={activeRole}
-          activeUser={role}
-          flowActionLogs={flowActionLogs}
-          canConfigureFlow={activeRole === "admin" || activeRole === "product"}
-          onFlowNodeChange={updateFlowNode}
-          onApplyFlowAction={applyFlowAction}
-          onAssignWork={assignWork}
-        />
-      ) : null}
       {activePage === "projects" ? (
         <Projects
+          demands={demands}
           projects={projects}
           tasks={tasks}
           flows={demandProjectFlows}

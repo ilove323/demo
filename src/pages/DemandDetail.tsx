@@ -42,9 +42,11 @@ export function DemandDetail({
     valueScore: String(demand.analysis.valueScore),
     implementationReason: demand.analysis.implementationReason,
     resourcePlan: demand.analysis.resourcePlan,
+    budgetEstimate: String(demand.analysis.budgetEstimate || ""),
+    budgetBasis: demand.analysis.budgetBasis,
     iteration: demand.analysis.iteration
   });
-  const [analysisNote, setAnalysisNote] = useState("已补充价值评分、迭代版本、资源方案和实现决策。");
+  const [analysisNote, setAnalysisNote] = useState("已补充价值评分、迭代版本、资源方案、预算测算和实现决策。");
 
   const demandActions = flow ? getDemandDetailActions(activeRole, flow) : [];
   const selectedFlowLogs = flow ? flowActionLogs.filter((log) => log.flowId === flow.id) : [];
@@ -56,6 +58,8 @@ export function DemandDetail({
       valueScore: String(demand.analysis.valueScore),
       implementationReason: demand.analysis.implementationReason,
       resourcePlan: demand.analysis.resourcePlan,
+      budgetEstimate: String(demand.analysis.budgetEstimate || ""),
+      budgetBasis: demand.analysis.budgetBasis,
       iteration: demand.analysis.iteration
     });
   }, [demand.id, demand.analysis]);
@@ -80,6 +84,8 @@ export function DemandDetail({
       valueScore: clampScore(Number(analysisDraft.valueScore) || 0),
       implementationReason: analysisDraft.implementationReason.trim(),
       resourcePlan: analysisDraft.resourcePlan.trim(),
+      budgetEstimate: Math.max(0, Math.round(Number(analysisDraft.budgetEstimate) || 0)),
+      budgetBasis: analysisDraft.budgetBasis.trim(),
       iteration: analysisDraft.iteration.trim()
     };
   }
@@ -90,7 +96,7 @@ export function DemandDetail({
 
   function submitSolutionFromReview() {
     const nextAnalysis = productReviewAnalysis();
-    const note = `${analysisNote.trim() || "产品经理完成需求评审。"} 价值评分 ${nextAnalysis.valueScore}，迭代 ${nextAnalysis.iteration}，资源方案：${nextAnalysis.resourcePlan}`;
+    const note = `${analysisNote.trim() || "产品经理完成需求评审。"} 价值评分 ${nextAnalysis.valueScore}，迭代 ${nextAnalysis.iteration}，预算测算 ${formatMoney(nextAnalysis.budgetEstimate)}，资源方案：${nextAnalysis.resourcePlan}`;
     onUpdateAnalysis(demand.id, nextAnalysis, note);
     if (flow) onApplyFlowAction(flow.id, "product.submitSolution", note);
   }
@@ -151,13 +157,13 @@ export function DemandDetail({
               <strong>需求描述</strong>
               <p>{demand.description}</p>
               <strong>业务价值</strong>
-              <p>{demand.analysis.feasibility}</p>
+              <p>{demand.objective}</p>
             </div>
             <div className="detail-list relaxed">
-              <div><span>价值评分</span><strong>{demand.analysis.valueScore}</strong></div>
-              <div><span>迭代版本</span><strong>{demand.analysis.iteration}</strong></div>
-              <div><span>资源方案</span><strong>{demand.analysis.resourcePlan}</strong></div>
-              <div><span>实现决策</span><strong>{demand.analysis.implementationReason}</strong></div>
+              <div><span>提出人</span><strong>{demand.requester}</strong></div>
+              <div><span>所属部门</span><strong>{demand.team}</strong></div>
+              <div><span>期望上线</span><strong>{demand.targetDate}</strong></div>
+              <div><span>重要级别</span><strong>{demand.priority}</strong></div>
               <div><span>附件</span><strong>需求说明.docx / 业务样例.xlsx</strong></div>
             </div>
           </div>
@@ -168,8 +174,10 @@ export function DemandDetail({
               <div className="form-grid">
                 <label>价值评分<input value={analysisDraft.valueScore} onChange={(event) => setAnalysisDraft((draft) => ({ ...draft, valueScore: event.target.value }))} /></label>
                 <label>迭代版本<input value={analysisDraft.iteration} onChange={(event) => setAnalysisDraft((draft) => ({ ...draft, iteration: event.target.value }))} /></label>
+                <label>预算测算（元）<input type="number" min="0" value={analysisDraft.budgetEstimate} onChange={(event) => setAnalysisDraft((draft) => ({ ...draft, budgetEstimate: event.target.value }))} /></label>
                 <label className="wide">业务价值 / 可行性<textarea value={analysisDraft.feasibility} onChange={(event) => setAnalysisDraft((draft) => ({ ...draft, feasibility: event.target.value }))} /></label>
                 <label className="wide">资源方案<textarea value={analysisDraft.resourcePlan} onChange={(event) => setAnalysisDraft((draft) => ({ ...draft, resourcePlan: event.target.value }))} /></label>
+                <label className="wide">预算测算依据<textarea value={analysisDraft.budgetBasis} onChange={(event) => setAnalysisDraft((draft) => ({ ...draft, budgetBasis: event.target.value }))} /></label>
                 <label className="wide">实现决策<textarea value={analysisDraft.implementationReason} onChange={(event) => setAnalysisDraft((draft) => ({ ...draft, implementationReason: event.target.value }))} /></label>
                 <label className="wide">评审留言 / 附件说明<textarea value={analysisNote} onChange={(event) => setAnalysisNote(event.target.value)} /></label>
               </div>
@@ -179,7 +187,20 @@ export function DemandDetail({
                 <button className="btn" type="button" onClick={submitSolutionFromReview}>保存并发起方案确认</button>
               </div>
             </div>
-          ) : null}
+          ) : (
+            <div className="panel product-review-editor">
+              <SectionHeader title="产品经理需求评审结果" action={<StatusTag tone="blue">阶段1：需求评审</StatusTag>} />
+              <div className="detail-list relaxed">
+                <div><span>价值评分</span><strong>{demand.analysis.valueScore}</strong></div>
+                <div><span>迭代版本</span><strong>{demand.analysis.iteration}</strong></div>
+                <div><span>预算测算</span><strong>{demand.analysis.budgetEstimate > 0 ? formatMoney(demand.analysis.budgetEstimate) : "待产品经理测算"}</strong></div>
+                <div><span>业务价值 / 可行性</span><strong>{demand.analysis.feasibility}</strong></div>
+                <div><span>资源方案</span><strong>{demand.analysis.resourcePlan}</strong></div>
+                <div><span>预算测算依据</span><strong>{demand.analysis.budgetBasis}</strong></div>
+                <div><span>实现决策</span><strong>{demand.analysis.implementationReason}</strong></div>
+              </div>
+            </div>
+          )}
 
           {flow ? (
             <div className="panel">
@@ -374,4 +395,9 @@ function getDemandDetailActions(activeRole: RoleId, flow: DemandProjectFlow): Fl
 
 function clampScore(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function formatMoney(value: number) {
+  if (!value) return "0";
+  return `${Math.round(value / 10000)}万`;
 }

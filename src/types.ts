@@ -5,7 +5,6 @@ export type RoleId = "admin" | "executive" | "pm" | "product" | "requester" | "b
 export type PageId =
   | "dashboard"
   | "demands"
-  | "workflow"
   | "projects"
   | "tasks"
   | "resources"
@@ -97,6 +96,8 @@ export interface DemandAnalysis {
   valueScore: number;
   implementationReason: string;
   resourcePlan: string;
+  budgetEstimate: number;
+  budgetBasis: string;
   iteration: string;
 }
 
@@ -148,19 +149,6 @@ export interface ContributionItem {
   effort: string;
   cost: string;
   status: string;
-}
-
-export interface ProductWorkflowItem {
-  id: string;
-  title: string;
-  demandId: string;
-  owner: string;
-  stage: string;
-  status: string;
-  description: string;
-  decision: string;
-  nextAction: string;
-  artifacts: string[];
 }
 
 export type DeliveryRequestStatus = "草稿" | "方案确认中" | "待项目经理启动" | "退回方案确认" | "项目进行" | "项目验收" | "已关闭";

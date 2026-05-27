@@ -246,7 +246,7 @@ export function Tasks({
       </div>
 
       <div className="panel">
-        <SectionHeader title={titleForTaskView(taskViewMode)} action={<TaskViewToggle value={taskViewMode} onChange={setTaskViewMode} compact />} />
+        <SectionHeader title={titleForTaskView(taskViewMode)} />
         {taskViewMode === "calendar" ? (
           <ScheduleCalendar
             title="我的排期日历"
